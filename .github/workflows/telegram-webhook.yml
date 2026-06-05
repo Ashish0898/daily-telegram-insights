@@ -1,0 +1,29 @@
+name: Telegram Webhook Dispatch
+
+on:
+  repository_dispatch:
+    types: [telegram_message]
+
+jobs:
+  handle-telegram:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: 'requirements.txt'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Handle Telegram event
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TALIVY_API_KEY: ${{ secrets.TALIVY_API_KEY }}
+          TALIVY_ENDPOINT: ${{ secrets.TALIVY_ENDPOINT }}
+        run: python src/handle_telegram.py

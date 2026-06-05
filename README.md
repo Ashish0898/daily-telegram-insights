@@ -61,6 +61,37 @@ python src/send_news.py --query "latest football news"
 
 For Telegram delivery, this will send the search summary to the same chat configured by `TELEGRAM_CHAT_ID`.
 
+## Interactive Telegram bot with Vercel
+
+You can make the bot interactive without polling by using a Vercel webhook.
+
+### Deploy the webhook endpoint
+
+Create a Vercel project from this repo and add these environment variables:
+
+- `GITHUB_TOKEN` - GitHub personal access token with `repo` scope
+- `GITHUB_REPO` - Your repo name, e.g. `username/daily-telegram-insights`
+- `TELEGRAM_BOT_TOKEN` - Your Telegram bot token
+
+### Set the Telegram webhook
+
+After deployment, point Telegram to the webhook URL:
+
+```bash
+curl -X POST "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/setWebhook?url=https://<your-vercel-host>.vercel.app/api/telegram"
+```
+
+### Available bot commands
+
+- `/fact` — send a new random fact
+- `/news` — fetch the latest news using Talivy
+- `/search <query>` — search Talivy for a custom topic
+- `/help` — show help text
+
+### GitHub workflow
+
+This repo includes a `telegram-webhook.yml` workflow that listens for `repository_dispatch` events and routes the incoming Telegram request through GitHub Actions.
+
 ## Configuration
 
 - **Schedule**: Edit `.github/workflows/daily-fact.yml` to change the cron schedule
