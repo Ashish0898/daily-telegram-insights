@@ -96,7 +96,7 @@ Vercel will automatically run the scheduled endpoints defined in `vercel.json`:
 ### Available bot commands
 
 - `/fact` — send a new random fact
-- `/news` — fetch the latest news using Talivy
+- `/news` or `/news <query>` — fetch Talivy news for a topic
 - `/search <query>` — search Talivy for a custom topic
 - `/help` — show help text
 

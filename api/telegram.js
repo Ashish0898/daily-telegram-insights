@@ -11,7 +11,11 @@ const parseCommand = (text = "") => {
   }
 
   if (normalized.startsWith("/news")) {
-    return { type: "news", query: "latest FIFA WC news" };
+    const query = trimmed.replace(/^\/news\s*/i, "").trim();
+    return {
+      type: "news",
+      query: query || "latest FIFA WC news",
+    };
   }
 
   if (normalized.startsWith("/search")) {
