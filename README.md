@@ -63,15 +63,20 @@ For Telegram delivery, this will send the search summary to the same chat config
 
 ## Interactive Telegram bot with Vercel
 
-You can make the bot interactive without polling by using a Vercel webhook.
+This repo now runs the bot directly on Vercel, including webhook handling and scheduled delivery.
 
 ### Deploy the webhook endpoint
 
 Create a Vercel project from this repo and add these environment variables:
 
-- `GITHUB_TOKEN` - GitHub personal access token with `repo` scope
-- `GITHUB_REPO` - Your repo name, e.g. `username/daily-telegram-insights`
+- `GITHUB_TOKEN` - Your GitHub API key for LLM access
 - `TELEGRAM_BOT_TOKEN` - Your Telegram bot token
+- `TELEGRAM_CHAT_ID` - Your Telegram chat/user ID for scheduled messages
+- `TALIVY_API_KEY` - Your Talivy API key
+- `TALIVY_ENDPOINT` - Talivy search endpoint URL
+- `NEWS_QUERY` (optional) - Default Talivy query for scheduled news
+- `NEWS_LIMIT` (optional) - Default number of news results to send
+- `NEWS_SUMMARY` (optional) - Set to `true` to send a single summary message instead of separate posts
 
 ### Set the Telegram webhook
 
@@ -81,16 +86,19 @@ After deployment, point Telegram to the webhook URL:
 curl -X POST "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/setWebhook?url=https://<your-vercel-host>.vercel.app/api/telegram"
 ```
 
+### Vercel schedules
+
+Vercel will automatically run the scheduled endpoints defined in `vercel.json`:
+
+- `GET /api/fact` — send a daily fact
+- `GET /api/news` — send a daily Talivy news update
+
 ### Available bot commands
 
 - `/fact` — send a new random fact
 - `/news` — fetch the latest news using Talivy
 - `/search <query>` — search Talivy for a custom topic
 - `/help` — show help text
-
-### GitHub workflow
-
-This repo includes a `telegram-webhook.yml` workflow that listens for `repository_dispatch` events and routes the incoming Telegram request through GitHub Actions.
 
 ## Configuration
 
