@@ -9,7 +9,7 @@ from datetime import datetime,timezone
 
 # GitHub LLM API config
 GITHUB_ENDPOINT = "https://models.github.ai/inference"
-GITHUB_API_KEY = os.getenv("GITHUB_API_KEY")
+GITHUB_API_KEY = os.getenv("GITHUB_TOKEN")
 MODEL_NAME = "openai/gpt-4o-mini"
 
 # Telegram config
