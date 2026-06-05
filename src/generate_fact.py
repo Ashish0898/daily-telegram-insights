@@ -9,7 +9,7 @@ from datetime import datetime,timezone
 
 # GitHub LLM API config
 GITHUB_ENDPOINT = "https://models.github.ai/inference"
-GITHUB_API_KEY = os.getenv("GITHUB_TOKEN")
+GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
 MODEL_NAME = "openai/gpt-4o-mini"
 
 # Telegram config
@@ -51,7 +51,7 @@ def generate_fact():
     try:
         response = requests.post(
             f"{GITHUB_ENDPOINT}/chat/completions",
-            headers={**headers, "Authorization": f"Bearer {GITHUB_API_KEY}"},
+            headers={**headers, "Authorization": f"Bearer {GITHUB_TOKEN}"},
             json=payload,
             timeout=30,
         )
@@ -90,8 +90,8 @@ def send_telegram_message(message):
 def main():
     """Main function: generate fact and send to Telegram."""
     try:
-        if not GITHUB_API_KEY:
-            raise ValueError("GITHUB_API_KEY is not set")
+        if not GITHUB_TOKEN:
+            raise ValueError("GITHUB_TOKEN is not set")
 
         print("Generating random fact...")
         fact = generate_fact()

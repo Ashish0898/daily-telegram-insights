@@ -17,7 +17,7 @@ Automatically send a daily random fact to Telegram using GitHub LLM API.
 
 Add these secrets to your repository (Settings → Secrets and variables → Actions):
 
-- `GITHUB_API_KEY` - Your GitHub API key for LLM access
+- `GITHUB_TOKEN` - Your GitHub API key for LLM access
 - `TELEGRAM_BOT_TOKEN` - Your Telegram bot token (from @BotFather)
 - `TELEGRAM_CHAT_ID` - Your Telegram chat/user ID
 
@@ -37,7 +37,7 @@ Optional Talivy secrets for web search updates:
 ### 3. Local Testing
 
 ```bash
-export GITHUB_API_KEY="your_key"
+export GITHUB_TOKEN="your_key"
 export TELEGRAM_BOT_TOKEN="your_token"
 export TELEGRAM_CHAT_ID="your_chat_id"
 
