@@ -53,32 +53,39 @@ const getResponseText = async (command) => {
   return formatSearchResults(query, raw, 3);
 };
 
-export default async function handler(req, res) {
+export const config = { runtime: "edge" };
+
+const jsonResponse = (body, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+export default async function handler(req) {
   if (req.method !== "POST") {
-    res.status(405).send("Method Not Allowed");
-    return;
+    return new Response("Method Not Allowed", { status: 405 });
   }
 
-  const body = req.body || {};
+  const body = await req.json().catch(() => ({}));
   const message = body.message || body.edited_message;
   if (!message || !message.text) {
-    res.status(200).json({ ok: true, reason: "no_text" });
-    return;
+    return jsonResponse({ ok: true, reason: "no_text" });
   }
 
   const chatId = message.chat?.id;
   if (!chatId) {
-    res.status(400).json({ ok: false, error: "missing_chat_id" });
-    return;
+    return jsonResponse({ ok: false, error: "missing_chat_id" }, 400);
   }
 
   try {
     const command = parseCommand(message.text);
     const responseText = await getResponseText(command);
     await sendTelegramMessage(chatId, responseText, { disable_web_page_preview: false });
-    res.status(200).json({ ok: true });
+    return jsonResponse({ ok: true });
   } catch (error) {
     console.error("Telegram webhook handler error:", error);
-    res.status(500).json({ ok: false, error: error.message || String(error) });
+    return jsonResponse({ ok: false, error: error.message || String(error) }, 500);
   }
 }
