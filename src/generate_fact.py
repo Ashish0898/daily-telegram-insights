@@ -10,7 +10,7 @@ from datetime import datetime,timezone
 # GitHub LLM API config
 GITHUB_ENDPOINT = "https://models.github.ai/inference"
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
-MODEL_NAME = "openai/gpt-4o-mini"
+MODEL_NAME = "openai/gpt-4.1-nano"
 
 # Telegram config
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
