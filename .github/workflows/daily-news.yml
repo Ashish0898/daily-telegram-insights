@@ -1,0 +1,51 @@
+name: Daily News
+
+on:
+  schedule:
+    - cron: '30 2 * * *'
+  workflow_dispatch:
+    inputs:
+      query:
+        description: 'Search query for Talivy'
+        required: false
+        default: 'latest FIFA WC news'
+      limit:
+        description: 'Number of top results to include'
+        required: false
+        default: '5'
+      summary:
+        description: 'Send a single summary message instead of individual messages'
+        required: false
+        default: 'false'
+
+jobs:
+  send-news:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: 'requirements.txt'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Send latest news
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TALIVY_API_KEY: ${{ secrets.TALIVY_API_KEY }}
+          TALIVY_ENDPOINT: ${{ secrets.TALIVY_ENDPOINT }}
+          NEWS_QUERY: ${{ github.event.inputs.query || 'latest FIFA WC news' }}
+          NEWS_LIMIT: ${{ github.event.inputs.limit || '5' }}
+          NEWS_SUMMARY: ${{ github.event.inputs.summary || 'false' }}
+        run: |
+          extra=""
+          if [ "${NEWS_SUMMARY}" = "true" ]; then
+            extra="--summary"
+          fi
+          python src/send_news.py --query "${NEWS_QUERY}" --limit "${NEWS_LIMIT}" ${extra}
