@@ -39,7 +39,9 @@ const getResponseText = async (command) => {
   }
 
   if (command.type === "fact") {
-    return await generateFact();
+    const fact = await generateFact();
+    const timestamp = new Date().toISOString().replace("T", " ").substring(0, 16) + " UTC";
+    return `<b>🎯 Daily Fact</b>\n\n${fact}\n\n<i>${timestamp}</i>`;
   }
 
   const query = command.query || "latest news";
