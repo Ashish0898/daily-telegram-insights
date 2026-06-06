@@ -1,6 +1,0 @@
-{
-  "name": "daily-telegram-insights",
-  "private": true,
-  "type": "module",
-  "main": "api/telegram.js"
-}
