@@ -3,10 +3,26 @@ import os
 import sys
 import re
 import html
+import traceback
 import requests
 from datetime import datetime, timezone
 from urllib.parse import urlparse, parse_qs
 from http.server import BaseHTTPRequestHandler
+
+# Load environment variables from .env file if present
+env_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '.env'))
+if os.path.exists(env_path):
+    with open(env_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            line = line.strip()
+            if not line or line.startswith('#'):
+                continue
+            if '=' in line:
+                key, val = line.split('=', 1)
+                key = key.strip()
+                val = val.strip().strip("'").strip('"')
+                if key not in os.environ:
+                    os.environ[key] = val
 
 # Add parent and src directories to sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -159,6 +175,7 @@ class handler(BaseHTTPRequestHandler):
             send_telegram_message(chat_id, response_text)
             self.send_json(200, {"ok": True})
         except Exception as e:
+            traceback.print_exc()
             self.send_json(500, {"error": str(e)})
 
     def handle_fact_get(self):
@@ -174,6 +191,7 @@ class handler(BaseHTTPRequestHandler):
             send_telegram_message(int(TELEGRAM_CHAT_ID), message)
             self.send_json(200, {"ok": True})
         except Exception as e:
+            traceback.print_exc()
             self.send_json(500, {"error": str(e)})
 
     def handle_news_get(self, query_string: str):
@@ -226,6 +244,7 @@ class handler(BaseHTTPRequestHandler):
 
             self.send_json(200, {"ok": True, "mode": "batch", "results": count})
         except Exception as e:
+            traceback.print_exc()
             self.send_json(500, {"error": str(e)})
 
 if __name__ == '__main__':
