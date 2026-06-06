@@ -62,9 +62,6 @@ def clean_text_for_telegram(text: str) -> str:
 
     text = str(text)
 
-    # 1. Escape HTML special characters (but not quotes for better telegram reading)
-    text = html.escape(text, quote=False)
-
     placeholders = {}
     placeholder_counter = 0
 
@@ -76,7 +73,7 @@ def clean_text_for_telegram(text: str) -> str:
         placeholder_counter += 1
         return placeholder
 
-    # 2. Extract and mask images: ![Alt](URL "Title")
+    # 1. Extract and mask images: ![Alt](URL "Title")
     def replace_image_md(match):
         alt = match.group(1).strip()
         url = match.group(2).strip()
@@ -93,7 +90,7 @@ def clean_text_for_telegram(text: str) -> str:
         text
     )
 
-    # 3. Extract and mask markdown links: [Text](URL "Title") or [](URL)
+    # 2. Extract and mask markdown links: [Text](URL "Title") or [](URL)
     def replace_link_md(match):
         anchor = match.group(1).strip()
         url = match.group(2).strip()
@@ -103,7 +100,8 @@ def clean_text_for_telegram(text: str) -> str:
         if not anchor:
             anchor = title or url
 
-        formatted_anchor = format_markdown_inline_styling(anchor)
+        safe_anchor = html.escape(anchor, quote=False)
+        formatted_anchor = format_markdown_inline_styling(safe_anchor)
         return add_placeholder(f'<a href="{safe_url}">{formatted_anchor}</a>')
 
     text = re.sub(
@@ -112,13 +110,17 @@ def clean_text_for_telegram(text: str) -> str:
         text
     )
 
-    # 4. Extract and mask raw URLs (like https://example.com/...)
+    # 3. Extract and mask raw URLs (like https://example.com/...)
     def replace_raw_url(match):
         url = match.group(0)
         safe_url = html.escape(url, quote=True)
-        return add_placeholder(f'<a href="{safe_url}">{url}</a>')
+        safe_anchor = html.escape(url, quote=False)
+        return add_placeholder(f'<a href="{safe_url}">{safe_anchor}</a>')
 
     text = re.sub(r"https?://[^\s()<>\"']+", replace_raw_url, text)
+
+    # 4. Escape HTML special characters for the rest of the unmasked text (but not quotes)
+    text = html.escape(text, quote=False)
 
     # 5. Apply markdown bold/italic formatting to the remaining text (safely since links & raw URLs are masked!)
     text = format_markdown_inline_styling(text)

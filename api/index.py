@@ -81,7 +81,7 @@ def get_response_text(cmd: dict) -> str:
         return build_help_message()
 
     if cmd_type == "fact":
-        fact = generate_fact()
+        fact = html.escape(generate_fact(), quote=False)
         timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
         return f"<b>🎯 Daily Fact</b>\n\n{fact}\n\n<i>{timestamp}</i>"
 
@@ -104,7 +104,12 @@ def send_telegram_message(chat_id: int, text: str) -> None:
     }
 
     response = requests.post(TELEGRAM_API, json=payload, timeout=15)
-    response.raise_for_status()
+    try:
+        response.raise_for_status()
+    except requests.HTTPError as e:
+        print(f"Telegram API Error response: {response.text}")
+        print(f"Failed to send text:\n{text}")
+        raise
 
 class handler(BaseHTTPRequestHandler):
     def send_json(self, status_code: int, data: dict):
@@ -184,7 +189,7 @@ class handler(BaseHTTPRequestHandler):
             return
 
         try:
-            fact = generate_fact()
+            fact = html.escape(generate_fact(), quote=False)
             timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
             message = f"<b>🎯 Daily Fact</b>\n\n{fact}\n\n<i>{timestamp}</i>"
 
