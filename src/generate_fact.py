@@ -31,6 +31,10 @@ def generate_fact():
         "Give me a unique random fact that's unlikely to be repeated if asked again soon. Keep it short and fun.",
     ]
 
+    # Randomize parameters for each call to increase diversity
+    temperature = random.uniform(0.7, 1.5)
+    top_p = random.uniform(0.75, 0.95)
+
     payload = {
         "messages": [
             {
@@ -42,14 +46,14 @@ def generate_fact():
                 "content": random.choice(prompt_variants),
             },
         ],
-        "temperature": 0.9,
-        "top_p": 0.8,
-        "top_k": 50,
+        "temperature": temperature,
+        "top_p": top_p,
         "max_tokens": 200,
         "model": MODEL_NAME,
     }
 
     try:
+        print(f"API Parameters - Temperature: {temperature:.2f}, Top_p: {top_p:.2f}")
         response = requests.post(
             f"{GITHUB_ENDPOINT}/chat/completions",
             headers={**headers, "Authorization": f"Bearer {GITHUB_TOKEN}"},
