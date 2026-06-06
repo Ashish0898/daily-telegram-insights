@@ -2,11 +2,17 @@
 """Send Talivy web updates to Telegram."""
 
 import argparse
+import html
 import os
 import requests
 from datetime import datetime, timezone
 
-from talivy_search import talivy_search, format_search_results, parse_talivy_results
+from talivy_search import (
+    clean_text_for_telegram,
+    talivy_search,
+    format_search_results,
+    parse_talivy_results,
+)
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
@@ -25,7 +31,13 @@ def send_telegram_message(message: str) -> None:
     }
 
     response = requests.post(TELEGRAM_API, json=payload, timeout=10)
-    response.raise_for_status()
+    try:
+        response.raise_for_status()
+    except requests.HTTPError:
+        print("Telegram request payload:", payload)
+        print("Telegram response status:", response.status_code)
+        print("Telegram response body:", response.text)
+        raise
 
 
 def build_message(query: str, raw_data: dict, limit: int) -> str:
@@ -35,8 +47,10 @@ def build_message(query: str, raw_data: dict, limit: int) -> str:
 
 
 def build_item_message(query: str, item: dict, index: int, total: int) -> str:
-    title = item.get("title") or item.get("headline") or "Untitled"
-    snippet = (
+    title = clean_text_for_telegram(
+        item.get("title") or item.get("headline") or "Untitled"
+    )
+    snippet = clean_text_for_telegram(
         item.get("content")
         or item.get("snippet")
         or item.get("summary")
@@ -45,13 +59,16 @@ def build_item_message(query: str, item: dict, index: int, total: int) -> str:
         or "No description available."
     )
     url = item.get("url")
+    if url:
+        url = html.escape(str(url), quote=True)
+
     lines = [
         f"<b>📡 Web update ({index}/{total})</b>",
         f"<b>{title}</b>",
     ]
+    lines.append(snippet)
     if url:
         lines.append(f"<a href=\"{url}\">Read more</a>")
-    lines.append(snippet)
     return "\n\n".join(lines).strip()
 
 

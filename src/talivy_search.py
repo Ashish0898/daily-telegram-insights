@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Talivy web search helper for fetching news or search summaries."""
 
+import html
 import os
+import re
 import requests
 
 TALIVY_API_KEY = os.getenv("TALIVY_API_KEY")
@@ -42,16 +44,65 @@ def parse_talivy_results(data: dict) -> list[dict]:
     return results
 
 
+def clean_text_for_telegram(text: str) -> str:
+    """Sanitize raw text for Telegram HTML output."""
+    if not text:
+        return ""
+
+    text = str(text)
+
+    # 1. Escape HTML special characters (but not quotes for better telegram reading)
+    text = html.escape(text, quote=False)
+
+    # 2. Convert markdown links: [Text](URL) -> <a href="URL">Text</a>
+    def replace_link(match):
+        anchor = match.group(1)
+        url = match.group(2)
+        safe_url = html.escape(url, quote=True)
+        return f'<a href="{safe_url}">{anchor}</a>'
+
+    text = re.sub(r"\[([^\]]*?)\]\(([^\s)]+)\)", replace_link, text)
+
+    # 3. Convert empty markdown links: [](URL) -> <a href="URL">URL</a>
+    def replace_empty_link(match):
+        url = match.group(1)
+        safe_url = html.escape(url, quote=True)
+        return f'<a href="{safe_url}">{safe_url}</a>'
+
+    text = re.sub(r"\[\]\(([^\s)]+)\)", replace_empty_link, text)
+
+    # 4. Convert image markdown: ![Alt](URL) -> <a href="URL">Alt</a>
+    def replace_image(match):
+        alt = match.group(1) or "Image"
+        url = match.group(2)
+        safe_url = html.escape(url, quote=True)
+        return f'<a href="{safe_url}">{alt}</a>'
+
+    text = re.sub(r"!\[(.*?)\]\(([^\s)]+)\)", replace_image, text)
+
+    # 5. Convert markdown bold/italic formatting to HTML tags
+    text = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", text)
+    text = re.sub(r"\*(.+?)\*", r"<i>\1</i>", text)
+    text = re.sub(r"__([^_]+)__", r"<b>\1</b>", text)
+    text = re.sub(r"_([^_]+)_", r"<i>\1</i>", text)
+
+    # 6. Normalize whitespace/line endings
+    text = re.sub(r"\s*\n\s*", "\n", text).strip()
+    return text
+
+
 def format_search_results(query: str, data: dict, limit: int = 3) -> str:
     """Create a Telegram-friendly message from Talivy search results."""
     results = parse_talivy_results(data)
     if not results:
         return f"No search results found for: {query}"
 
-    lines = [f"<b>🔎 Search results for:</b> {query}", ""]
+    lines = [f"<b>🔎 Search results for:</b> {html.escape(str(query), quote=False)}", ""]
     for item in results[:limit]:
-        title = item.get("title") or item.get("headline") or "Untitled"
-        snippet = (
+        title = clean_text_for_telegram(
+            item.get("title") or item.get("headline") or "Untitled"
+        )
+        snippet = clean_text_for_telegram(
             item.get("content")
             or item.get("snippet")
             or item.get("summary")
@@ -60,6 +111,8 @@ def format_search_results(query: str, data: dict, limit: int = 3) -> str:
             or "No description available."
         )
         url = item.get("url")
+        if url:
+            url = html.escape(str(url), quote=True)
         lines.append(f"<b>{title}</b>")
         if url:
             lines.append(f"<a href=\"{url}\">Link</a>")

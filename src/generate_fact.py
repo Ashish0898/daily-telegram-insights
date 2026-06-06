@@ -47,8 +47,8 @@ def generate_fact():
             },
         ],
         "temperature": temperature,
-        "top_p": top_p,
-        "max_tokens": 200,
+        # "top_p": top_p,
+        # "max_tokens": 200,
         "model": MODEL_NAME,
     }
 
