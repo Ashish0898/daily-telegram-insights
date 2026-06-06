@@ -35,15 +35,16 @@ def generate_fact():
         "messages": [
             {
                 "role": "system",
-                "content": "You are a helpful assistant that generates interesting random facts.",
+                "content": "You are a fact generator that creates unique, diverse, and interesting random facts. Each fact should be completely different from previous facts. Focus on unusual trivia, surprising scientific discoveries, historical oddities, and lesser-known information from various domains. Never repeat the same fact twice.",
             },
             {
                 "role": "user",
                 "content": random.choice(prompt_variants),
             },
         ],
-        "temperature": 1.2,
-        "top_p": 1.0,
+        "temperature": 0.9,
+        "top_p": 0.8,
+        "top_k": 50,
         "max_tokens": 200,
         "model": MODEL_NAME,
     }
