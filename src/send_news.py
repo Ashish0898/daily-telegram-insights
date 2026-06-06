@@ -75,7 +75,7 @@ def build_item_message(query: str, item: dict, index: int, total: int) -> str:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Send Talivy web search results to Telegram.")
     parser.add_argument("--query", default="latest FIFA WC news", help="Search query to send to Telegram")
-    parser.add_argument("--limit", type=int, default=5, help="Number of top results to include")
+    parser.add_argument("--limit", type=int, default=3, help="Number of top results to include")
     parser.add_argument(
         "--summary",
         action="store_true",

@@ -19,31 +19,63 @@ TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 TELEGRAM_API = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
 
 
+FACT_SEEDS = [
+    "ancient shipwrecks", "deep-sea biology", "weird medieval laws", "unusual geography",
+    "history of mapmaking", "early ballooning and flight", "space exploration accidents",
+    "plant communication and intelligence", "insect behavior", "origin of everyday phrases",
+    "forgotten inventors", "extreme weather phenomena", "unique languages and linguistics",
+    "traditional instruments", "historical hoaxes", "animal cooperation", "bioluminescent organisms",
+    "ancient libraries", "history of writing systems", "unusual archaeological discoveries",
+    "history of cryptography and codes", "forgotten cities", "astronomical anomalies",
+    "micro-nations and self-declared states", "history of medical practices", "deep space signals",
+    "strange physics phenomena (like superfluidity)", "subterranean places (caves, catacombs)",
+    "animal migrations", "historical sports and games", "history of timekeeping (clocks, calendars)",
+    "fungal networks (mycelium)", "architectural marvels of the ancient world", "deep-ocean trenches",
+    "history of glassmaking", "bird intelligence and tool use", "volcanic islands",
+    "unique desert adaptations", "seed banks and botanical history", "origins of tea and coffee culture",
+    "optical illusions in nature", "sleep patterns in animals", "history of the printing press",
+    "sound and acoustic wonders (echoes, singing sands)", "ancient metallurgy", "history of paper and origami",
+    "navigation techniques of Polynesian sailors", "deep ice cores and climate history", "carnivorous plants",
+    "history of color pigments and dyes"
+]
+
+EXCLUDE_CLICHES = (
+    "Do NOT generate extremely common or overused trivia clichés, such as: "
+    "honey never spoiling, octopuses having three hearts/blue blood, Cleopatra living closer to the iPhone than "
+    "the pyramids, bananas being berries, strawberries not being berries, tomatoes being fruits, Wombat poop "
+    "being cubic, sloths holding their breath, or the invention of the match after the lighter."
+)
+
+
 def generate_fact():
     """Generate a random fact using GitHub LLM API."""
     headers = {
         "Content-Type": "application/json",
     }
 
-    prompt_variants = [
-        "Generate one interesting, concise random fact (max 2 sentences). Make it engaging and fun, and avoid very common or repeated facts.",
-        "Share a fresh, unusual fact in one or two sentences. Do not repeat common trivia; make it feel new and surprising.",
-        "Give me a unique random fact that's unlikely to be repeated if asked again soon. Keep it short and fun.",
-    ]
-
     # Randomize parameters for each call to increase diversity
     temperature = random.uniform(0.7, 1.5)
     top_p = random.uniform(0.75, 0.95)
+
+    seed = random.choice(FACT_SEEDS)
+    print(f"Selected seed topic: {seed}")
+
+    user_content = (
+        f"Generate one highly interesting, concise, and surprising random fact (max 2 sentences) "
+        f"related to this specific topic: '{seed}'.\n\n"
+        f"IMPORTANT: {EXCLUDE_CLICHES}\n\n"
+        "Focus on lesser-known details, surprising historical oddities, or unique scientific findings."
+    )
 
     payload = {
         "messages": [
             {
                 "role": "system",
-                "content": "You are a fact generator that creates unique, diverse, and interesting random facts. Each fact should be completely different from previous facts. Focus on unusual trivia, surprising scientific discoveries, historical oddities, and lesser-known information from various domains. Never repeat the same fact twice.",
+                "content": "You are a fact generator that creates unique, diverse, and interesting random facts. Focus on unusual trivia, surprising scientific discoveries, historical oddities, and lesser-known information from various domains. Never repeat the same fact twice.",
             },
             {
                 "role": "user",
-                "content": random.choice(prompt_variants),
+                "content": user_content,
             },
         ],
         "temperature": temperature,

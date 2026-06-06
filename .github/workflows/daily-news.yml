@@ -12,7 +12,7 @@ on:
       limit:
         description: 'Number of top results to include'
         required: false
-        default: '5'
+        default: '3'
       summary:
         description: 'Send a single summary message instead of individual messages'
         required: false
