@@ -44,6 +44,17 @@ def parse_talivy_results(data: dict) -> list[dict]:
     return results
 
 
+def format_markdown_inline_styling(text: str) -> str:
+    """Helper to convert markdown bold/italic to HTML tags, ignoring mid-word underscores."""
+    # Bold
+    text = re.sub(r"\*\*([^*]+?)\*\*", r"<b>\1</b>", text)
+    text = re.sub(r"\b__([^_]+)__\b", r"<b>\1</b>", text)
+    # Italic
+    text = re.sub(r"\*([^*]+?)\*", r"<i>\1</i>", text)
+    text = re.sub(r"\b_([^_]+)_\b", r"<i>\1</i>", text)
+    return text
+
+
 def clean_text_for_telegram(text: str) -> str:
     """Sanitize raw text for Telegram HTML output."""
     if not text:
@@ -54,39 +65,69 @@ def clean_text_for_telegram(text: str) -> str:
     # 1. Escape HTML special characters (but not quotes for better telegram reading)
     text = html.escape(text, quote=False)
 
-    # 2. Convert markdown links: [Text](URL) -> <a href="URL">Text</a>
-    def replace_link(match):
-        anchor = match.group(1)
-        url = match.group(2)
+    placeholders = {}
+    placeholder_counter = 0
+
+    # Helper to register placeholders
+    def add_placeholder(html_content):
+        nonlocal placeholder_counter
+        placeholder = f"@@@HTML_PLACEHOLDER_{placeholder_counter}@@@"
+        placeholders[placeholder] = html_content
+        placeholder_counter += 1
+        return placeholder
+
+    # 2. Extract and mask images: ![Alt](URL "Title")
+    def replace_image_md(match):
+        alt = match.group(1).strip()
+        url = match.group(2).strip()
+        title = (match.group(3) or "").strip()
+
         safe_url = html.escape(url, quote=True)
-        return f'<a href="{safe_url}">{anchor}</a>'
+        anchor = alt or title or "Image"
+        safe_anchor = html.escape(anchor, quote=False)
+        return add_placeholder(f'<a href="{safe_url}">{safe_anchor}</a>')
 
-    text = re.sub(r"\[([^\]]*?)\]\(([^\s)]+)\)", replace_link, text)
+    text = re.sub(
+        r"!\[([^\]]*?)\]\(\s*([^\s\"')]+)(?:\s+[\"'](.*?)[\"'])?\s*\)",
+        replace_image_md,
+        text
+    )
 
-    # 3. Convert empty markdown links: [](URL) -> <a href="URL">URL</a>
-    def replace_empty_link(match):
-        url = match.group(1)
+    # 3. Extract and mask markdown links: [Text](URL "Title") or [](URL)
+    def replace_link_md(match):
+        anchor = match.group(1).strip()
+        url = match.group(2).strip()
+        title = (match.group(3) or "").strip()
+
         safe_url = html.escape(url, quote=True)
-        return f'<a href="{safe_url}">{safe_url}</a>'
+        if not anchor:
+            anchor = title or url
 
-    text = re.sub(r"\[\]\(([^\s)]+)\)", replace_empty_link, text)
+        formatted_anchor = format_markdown_inline_styling(anchor)
+        return add_placeholder(f'<a href="{safe_url}">{formatted_anchor}</a>')
 
-    # 4. Convert image markdown: ![Alt](URL) -> <a href="URL">Alt</a>
-    def replace_image(match):
-        alt = match.group(1) or "Image"
-        url = match.group(2)
+    text = re.sub(
+        r"\[([^\]]*?)\]\(\s*([^\s\"')]+)(?:\s+[\"'](.*?)[\"'])?\s*\)",
+        replace_link_md,
+        text
+    )
+
+    # 4. Extract and mask raw URLs (like https://example.com/...)
+    def replace_raw_url(match):
+        url = match.group(0)
         safe_url = html.escape(url, quote=True)
-        return f'<a href="{safe_url}">{alt}</a>'
+        return add_placeholder(f'<a href="{safe_url}">{url}</a>')
 
-    text = re.sub(r"!\[(.*?)\]\(([^\s)]+)\)", replace_image, text)
+    text = re.sub(r"https?://[^\s()<>\"']+", replace_raw_url, text)
 
-    # 5. Convert markdown bold/italic formatting to HTML tags
-    text = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", text)
-    text = re.sub(r"\*(.+?)\*", r"<i>\1</i>", text)
-    text = re.sub(r"__([^_]+)__", r"<b>\1</b>", text)
-    text = re.sub(r"_([^_]+)_", r"<i>\1</i>", text)
+    # 5. Apply markdown bold/italic formatting to the remaining text (safely since links & raw URLs are masked!)
+    text = format_markdown_inline_styling(text)
 
-    # 6. Normalize whitespace/line endings
+    # 6. Restore placeholders
+    for placeholder, html_content in placeholders.items():
+        text = text.replace(placeholder, html_content)
+
+    # 7. Normalize whitespace/line endings
     text = re.sub(r"\s*\n\s*", "\n", text).strip()
     return text
 
