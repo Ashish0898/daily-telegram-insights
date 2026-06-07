@@ -191,6 +191,13 @@ class handler(BaseHTTPRequestHandler):
         if allowed_ids:
             if not from_id or str(from_id) not in allowed_ids:
                 print(f"User ID {from_id} not in allowlist. Request ignored.")
+                chat = message.get("chat")
+                chat_id = chat.get("id") if chat else None
+                if chat_id:
+                    try:
+                        send_telegram_message(chat_id, "⚠️ <b>Access Denied</b>\n\nYou are not authorized to use this bot.")
+                    except Exception as e:
+                        print(f"Failed to send access denied message: {e}")
                 self.send_json(200, {"ok": True, "reason": "ignored_user_not_allowlisted"})
                 return
 
