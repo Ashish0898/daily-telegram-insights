@@ -1,41 +1,105 @@
-# Daily Fact GitHub Action
+# Daily Fact & News Telegram Bot
 
-Automatically send a daily random fact to Telegram using GitHub LLM API.
+Automatically send a daily random fact and dynamic web news updates to Telegram using GitHub LLM API and Talivy Search.
 
 ## Features
 
-- 🤖 Generates random facts using GitHub's LLM API
-- 🌐 Optional Talivy web search support for live news updates
-- 📱 Sends to Telegram daily at 7:00 AM IST
-- ⚡ Minimal dependencies for fast execution
-- 💚 Energy-efficient with pip caching
-- 🧪 Manual trigger support for testing
+- 🤖 **Random Facts**: Generates unique, highly interesting facts using GitHub's LLM API (`openai/gpt-4.1-nano`).
+- 📡 **Dynamic News Digest**: Dynamically generates a fresh news search query every day (e.g., in fields like AI, space, science) using the LLM, then fetches live updates using the Talivy Search API. Fallbacks to `"world news at a glance today"`.
+- 🔒 **Webhook Security Middleware**:
+  - **Secret Token Verification**: Authenticates incoming requests from Telegram using a secret webhook token.
+  - **User Allowlisting**: Restricts bot access to specific Telegram user IDs. Responds to unauthorized users with a clean Access Denied message and halts processing immediately to save API quotas.
+- ⚡ **Minimal dependencies & high speed** for low execution overhead.
+- 🧪 **Scheduled or Manual triggers** via GitHub Actions or Vercel Crons.
+
+---
 
 ## Setup
 
-### 1. Create GitHub Secrets
+### 1. Create GitHub Secrets (for GitHub Actions)
 
-Add these secrets to your repository (Settings → Secrets and variables → Actions):
+If running facts via GitHub Actions, add these secrets (Settings → Secrets and variables → Actions):
 
 - `GITHUB_TOKEN` - Your GitHub API key for LLM access
 - `TELEGRAM_BOT_TOKEN` - Your Telegram bot token (from @BotFather)
 - `TELEGRAM_CHAT_ID` - Your Telegram chat/user ID
 
-Optional Talivy secrets for web search updates:
+---
 
+## Interactive Telegram bot with Vercel
+
+The bot can run as an interactive serverless webhook handler on Vercel.
+
+### Deploy the webhook endpoint
+
+Create a Vercel project from this repository and add these environment variables:
+
+#### Core Config
+- `GITHUB_TOKEN` - Your GitHub API key for LLM access
+- `TELEGRAM_BOT_TOKEN` - Your Telegram bot token
+- `TELEGRAM_CHAT_ID` - Your default Telegram chat ID (for scheduled messages)
+
+#### Webhook Security (Recommended)
+- `TELEGRAM_WEBHOOK_SECRET` (or `TELEGRAM_SECRET_TOKEN`) - A custom secret string (like a UUID) to authenticate incoming requests from Telegram.
+- `TELEGRAM_ALLOWED_USER_ID` - Your personal Telegram user ID to allowlist yourself.
+- `TELEGRAM_ALLOWED_USER_IDS` - Comma-separated list of multiple allowed Telegram user IDs (alternative/addition to the above).
+
+#### Talivy Search Config
 - `TALIVY_API_KEY` - Your Talivy API key
 - `TALIVY_ENDPOINT` - Talivy search endpoint URL
+- `NEWS_QUERY` (optional) - Overrides the LLM-generated dynamic query with a fixed query
+- `NEWS_LIMIT` (optional) - Number of news results to fetch (default: `5`)
+- `NEWS_SUMMARY` (optional) - Set to `true` to deliver as a single summary message instead of separate posts
 
-### 2. Get Telegram Credentials
+---
 
-1. Create a bot with [@BotFather](https://t.me/botfather)
-2. Get your chat ID:
-   - Send a message to your bot
-   - Visit `https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getUpdates`
-   - Find your `chat.id` in the JSON response
+### Security Configuration
 
-### 3. Local Testing
+#### 1. Generate a Webhook Secret Token
+You can generate a secure UUID string to use as your secret token:
+```bash
+# In your terminal
+uuidgen
+# Or via Python
+python3 -c "import uuid; print(uuid.uuid4())"
+```
+Set this generated string as the `TELEGRAM_WEBHOOK_SECRET` environment variable in Vercel.
 
+#### 2. Set the Telegram Webhook with Secret Token
+Point Telegram to your Vercel deployment URL and include the `secret_token` parameter:
+```bash
+curl -X POST "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/setWebhook?url=https://<your-vercel-host>.vercel.app/api/telegram&secret_token=<YOUR_SECRET_TOKEN>"
+```
+
+#### 3. How the Allowlist Works
+* If any allowlist variable (`TELEGRAM_ALLOWED_USER_ID`, `TELEGRAM_ALLOWED_USER_IDS`, or `TELEGRAM_CHAT_ID` if positive) is set, the bot will verify the sender's Telegram user ID (`message.from.id`).
+* If an unauthorized user attempts to message the bot, it replies with `⚠️ Access Denied\n\nYou are not authorized to use this bot.` and immediately terminates execution.
+* If a request does not contain the correct `X-Telegram-Bot-Api-Secret-Token` header, it is rejected silently to prevent spam/reconnaissance.
+
+---
+
+### Vercel schedules
+
+Vercel will automatically run the scheduled endpoints defined in `vercel.json`:
+
+- `GET /api/fact` — send a daily fact
+- `GET /api/news` — send a daily dynamic news update
+
+---
+
+### Available bot commands
+
+- `/fact` — send a new random fact
+- `/news` — generate a dynamic news query via LLM and search Talivy
+- `/news <query>` — search Talivy for a specific query
+- `/search <query>` — search Talivy for a custom topic
+- `/help` — show help text
+
+---
+
+## Local Testing
+
+To test the LLM fact generation locally:
 ```bash
 export GITHUB_TOKEN="your_key"
 export TELEGRAM_BOT_TOKEN="your_token"
@@ -44,80 +108,18 @@ export TELEGRAM_CHAT_ID="your_chat_id"
 python src/generate_fact.py
 ```
 
-## Optional: Talivy web search support
-
-If you want the bot to fetch web updates like latest football news, add these secrets:
-
-- `TALIVY_API_KEY` - Your Talivy API key
-- `TALIVY_ENDPOINT` - Talivy search endpoint URL
-
-Then run:
-
+To test the news generation locally (uses the dynamic LLM topic query by default, or defaults to world news fallback):
 ```bash
+export GITHUB_TOKEN="your_key"
 export TALIVY_API_KEY="your_talivy_key"
 export TALIVY_ENDPOINT="https://api.talivy.example/search"
+
+# Runs with dynamic news topic query
+python src/send_news.py
+
+# Runs with custom query
 python src/send_news.py --query "latest football news"
 ```
-
-For Telegram delivery, this will send the search summary to the same chat configured by `TELEGRAM_CHAT_ID`.
-
-## Interactive Telegram bot with Vercel
-
-This repo now runs the bot directly on Vercel, including webhook handling and scheduled delivery.
-
-### Deploy the webhook endpoint
-
-Create a Vercel project from this repo and add these environment variables:
-
-- `GITHUB_TOKEN` - Your GitHub API key for LLM access
-- `TELEGRAM_BOT_TOKEN` - Your Telegram bot token
-- `TELEGRAM_CHAT_ID` - Your Telegram chat/user ID for scheduled messages
-- `TALIVY_API_KEY` - Your Talivy API key
-- `TALIVY_ENDPOINT` - Talivy search endpoint URL
-- `NEWS_QUERY` (optional) - Default Talivy query for scheduled news
-- `NEWS_LIMIT` (optional) - Default number of news results to send
-- `NEWS_SUMMARY` (optional) - Set to `true` to send a single summary message instead of separate posts
-
-### Set the Telegram webhook
-
-After deployment, point Telegram to the webhook URL:
-
-```bash
-curl -X POST "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/setWebhook?url=https://<your-vercel-host>.vercel.app/api/telegram"
-```
-
-### Vercel schedules
-
-Vercel will automatically run the scheduled endpoints defined in `vercel.json`:
-
-- `GET /api/fact` — send a daily fact
-- `GET /api/news` — send a daily Talivy news update
-
-### Available bot commands
-
-- `/fact` — send a new random fact
-- `/news` or `/news <query>` — fetch Talivy news for a topic
-- `/search <query>` — search Talivy for a custom topic
-- `/help` — show help text
-
-## Configuration
-
-- **Schedule**: Edit `.github/workflows/daily-fact.yml` to change the cron schedule
-  - Current: 7:00 AM IST (1:30 AM UTC)
-  - Format: `minute hour * * *` (UTC timezone)
-- **Fact style**: Modify the system prompt in `src/generate_fact.py`
-- **Message format**: Edit the message template with emoji/title
-
-## Manual Trigger
-
-You can manually trigger the workflow from the GitHub Actions tab for testing.
-
-## Performance
-
-- Dependencies: 1 (requests)
-- First run: ~2-3 seconds
-- Subsequent runs: <1 second (with pip caching)
-- API calls: 2 (GitHub LLM + Telegram)
 
 ## License
 

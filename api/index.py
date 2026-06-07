@@ -28,7 +28,7 @@ if os.path.exists(env_path):
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
 
-from src.generate_fact import generate_fact
+from src.generate_fact import generate_fact, generate_dynamic_news_query
 from src.talivy_search import talivy_search, format_search_results, parse_talivy_results, clean_text_for_telegram
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -49,7 +49,7 @@ def parse_command(text: str) -> dict:
         query = re.sub(r"^/news\s*", "", trimmed, flags=re.IGNORECASE).strip()
         return {
             "type": "news",
-            "query": query or "latest FIFA WC news",
+            "query": query or None,
         }
 
     if normalized.startswith("/search"):
@@ -85,7 +85,11 @@ def get_response_text(cmd: dict) -> str:
         timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
         return f"<b>🎯 Daily Fact</b>\n\n{fact}\n\n<i>{timestamp}</i>"
 
-    search_query = query or "latest news"
+    if cmd_type == "news" and not query:
+        search_query = generate_dynamic_news_query()
+    else:
+        search_query = query or "latest news"
+
     try:
         raw = talivy_search(search_query, limit=3)
         return format_search_results(search_query, raw, limit=3)
@@ -240,7 +244,9 @@ class handler(BaseHTTPRequestHandler):
             return
 
         query_params = parse_qs(query_string)
-        query = query_params.get("query", [None])[0] or os.getenv("NEWS_QUERY") or "latest FIFA WC news"
+        query = query_params.get("query", [None])[0] or os.getenv("NEWS_QUERY")
+        if not query:
+            query = generate_dynamic_news_query()
         limit_str = query_params.get("limit", [None])[0] or os.getenv("NEWS_LIMIT") or "5"
         try:
             limit = int(limit_str)

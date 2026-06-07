@@ -101,6 +101,65 @@ def generate_fact():
         raise
 
 
+def generate_dynamic_news_query() -> str:
+    """Generate a dynamic, interesting news search query using GitHub LLM API."""
+    if not GITHUB_TOKEN:
+        print("GITHUB_TOKEN not set, returning fallback query.")
+        return "world news at a glance today"
+
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {GITHUB_TOKEN}"
+    }
+
+    categories = [
+        "artificial intelligence", "space exploration", "renewable energy",
+        "marine biology", "archaeological discoveries", "medical breakthroughs",
+        "quantum computing", "fusion energy", "consumer tech innovations",
+        "paleontology", "astrophysics", "robotics"
+    ]
+    selected_cat = random.choice(categories)
+
+    user_content = (
+        f"Generate a short (3-6 words) search query to find the latest, most interesting news, "
+        f"discoveries, or breakthroughs in the field of: '{selected_cat}'.\n\n"
+        f"Do NOT include any punctuation, quotes, or conversational text. Return ONLY the search query string itself. "
+        f"Example output: 'JWST new galaxy discoveries' or 'solid state battery breakthroughs'."
+    )
+
+    payload = {
+        "messages": [
+            {
+                "role": "system",
+                "content": "You are a concise search query generator. You output only the raw search query string.",
+            },
+            {
+                "role": "user",
+                "content": user_content,
+            },
+        ],
+        "temperature": 0.9,
+        "model": MODEL_NAME,
+    }
+
+    try:
+        response = requests.post(
+            f"{GITHUB_ENDPOINT}/chat/completions",
+            headers=headers,
+            json=payload,
+            timeout=30,
+        )
+        response.raise_for_status()
+        data = response.json()
+        query = data["choices"][0]["message"]["content"].strip()
+        query = query.strip('\'"`.?! ')
+        print(f"Generated dynamic news query: '{query}'")
+        return query or "world news at a glance today"
+    except Exception as e:
+        print(f"Error calling GitHub LLM API for news query: {e}")
+        return "world news at a glance today"
+
+
 def send_telegram_message(message):
     """Send message to Telegram."""
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:

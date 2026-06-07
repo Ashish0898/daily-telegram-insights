@@ -74,7 +74,7 @@ def build_item_message(query: str, item: dict, index: int, total: int) -> str:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Send Talivy web search results to Telegram.")
-    parser.add_argument("--query", default="latest FIFA WC news", help="Search query to send to Telegram")
+    parser.add_argument("--query", default=None, help="Search query to send to Telegram (defaults to a dynamic LLM-generated query)")
     parser.add_argument("--limit", type=int, default=3, help="Number of top results to include")
     parser.add_argument(
         "--summary",
@@ -86,8 +86,17 @@ def main() -> None:
     if not os.getenv("TALIVY_API_KEY") or not os.getenv("TALIVY_ENDPOINT"):
         raise ValueError("TALIVY_API_KEY and TALIVY_ENDPOINT must be set to use Talivy.")
 
-    print(f"Searching Talivy for: {args.query}")
-    raw_data = talivy_search(args.query, limit=args.limit)
+    query = args.query
+    if not query:
+        try:
+            from generate_fact import generate_dynamic_news_query
+            query = generate_dynamic_news_query()
+        except Exception as e:
+            print(f"Failed to generate dynamic query: {e}. Using fallback.")
+            query = "world news at a glance today"
+
+    print(f"Searching Talivy for: {query}")
+    raw_data = talivy_search(query, limit=args.limit)
     results = parse_talivy_results(raw_data)
 
     if args.summary or not results:

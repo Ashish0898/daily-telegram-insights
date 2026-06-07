@@ -40,7 +40,14 @@ def send_telegram_message(chat_id: int, text: str) -> None:
 
 def build_response(command: str, query: str | None) -> str:
     if command == "news":
-        search_query = query or "latest FIFA WC news"
+        search_query = query
+        if not search_query:
+            try:
+                from generate_fact import generate_dynamic_news_query
+                search_query = generate_dynamic_news_query()
+            except Exception as e:
+                print(f"Failed to generate dynamic query: {e}. Using fallback.")
+                search_query = "world news at a glance today"
         raw = talivy_search(search_query, limit=3)
         return format_search_results(search_query, raw, limit=3)
 
