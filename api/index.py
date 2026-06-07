@@ -68,8 +68,8 @@ def build_help_message() -> str:
     return (
         "Hello! 🤖\n\n"
         "Use /fact to receive a new random fact.\n"
-        "Use /news or /news &lt;query&gt; to get Talivy news.\n"
-        "Use /search &lt;query&gt; to search Talivy for a custom topic.\n"
+        "Use /news to get a dynamic daily news digest, or /news &lt;query&gt; for a specific topic.\n"
+        "Use /search &lt;query&gt; to search Talivy for custom web results.\n"
         "Use /help to show this message again."
     )
 

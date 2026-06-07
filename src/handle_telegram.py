@@ -60,8 +60,9 @@ def build_response(command: str, query: str | None) -> str:
         return (
             "Hello! 🤖\n\n"
             "Use /fact to receive a new random fact.\n"
-            "Use /news to get the latest Talivy news summary.\n"
-            "Use /search <query> to search something specific."
+            "Use /news to get a dynamic daily news digest, or /news <query> for a specific topic.\n"
+            "Use /search <query> to search Talivy for custom web results.\n"
+            "Use /help to show this message again."
         )
 
     return generate_fact()
