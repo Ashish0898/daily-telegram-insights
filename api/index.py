@@ -29,6 +29,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'src')))
 
 from src.generate_fact import generate_fact, generate_dynamic_news_query
+from src.send_news import execute_and_send_news
 from src.talivy_search import talivy_search, format_search_results, parse_talivy_results, clean_text_for_telegram
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -215,8 +216,14 @@ class handler(BaseHTTPRequestHandler):
         
         try:
             cmd = parse_command(text)
-            response_text = get_response_text(cmd)
-            send_telegram_message(chat_id, response_text)
+            cmd_type = cmd["type"]
+            query = cmd["query"]
+
+            if cmd_type in ("news", "search"):
+                execute_and_send_news(chat_id, query, limit=3, summary=False)
+            else:
+                response_text = get_response_text(cmd)
+                send_telegram_message(chat_id, response_text)
             self.send_json(200, {"ok": True})
         except Exception as e:
             traceback.print_exc()
@@ -245,8 +252,6 @@ class handler(BaseHTTPRequestHandler):
 
         query_params = parse_qs(query_string)
         query = query_params.get("query", [None])[0] or os.getenv("NEWS_QUERY")
-        if not query:
-            query = generate_dynamic_news_query()
         limit_str = query_params.get("limit", [None])[0] or os.getenv("NEWS_LIMIT") or "5"
         try:
             limit = int(limit_str)
@@ -257,38 +262,14 @@ class handler(BaseHTTPRequestHandler):
         summary = summary_str.lower() == "true"
 
         try:
-            data = talivy_search(query, limit=limit)
-            results = parse_talivy_results(data)
-
-            if summary or not results:
-                message = format_search_results(query, data, limit=limit)
-                send_telegram_message(int(TELEGRAM_CHAT_ID), message)
-                self.send_json(200, {"ok": True, "mode": "summary", "results": len(results)})
-                return
-
-            count = min(limit, len(results))
-            for index, item in enumerate(results[:count], start=1):
-                title = clean_text_for_telegram(item.get("title") or item.get("headline") or "Untitled")
-                snippet = clean_text_for_telegram(
-                    item.get("content") or item.get("snippet") or item.get("summary") or
-                    item.get("description") or item.get("raw_content") or "No description available."
-                )
-                url = item.get("url")
-                if url:
-                    url = html.escape(str(url), quote=True)
-                
-                lines = [
-                    f"<b>📡 Web update ({index}/{count})</b>",
-                    f"<b>{title}</b>",
-                ]
-                lines.append(snippet)
-                if url:
-                    lines.append(f'<a href="{url}">Read more</a>')
-                
-                item_message = "\n\n".join(lines).strip()
-                send_telegram_message(int(TELEGRAM_CHAT_ID), item_message)
-
-            self.send_json(200, {"ok": True, "mode": "batch", "results": count})
+            count = execute_and_send_news(
+                chat_id=int(TELEGRAM_CHAT_ID),
+                query=query,
+                limit=limit,
+                summary=summary
+            )
+            mode = "summary" if summary else "batch"
+            self.send_json(200, {"ok": True, "mode": mode, "results": count})
         except Exception as e:
             traceback.print_exc()
             self.send_json(500, {"error": str(e)})

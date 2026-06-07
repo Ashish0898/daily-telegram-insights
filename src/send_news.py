@@ -15,22 +15,21 @@ from talivy_search import (
 )
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
-TELEGRAM_API = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+TELEGRAM_API = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage" if TELEGRAM_BOT_TOKEN else ""
 
 
-def send_telegram_message(message: str) -> None:
-    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
-        raise ValueError("TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID must be set in environment variables.")
+def send_telegram_message(chat_id: int | str, message: str) -> None:
+    if not TELEGRAM_BOT_TOKEN:
+        raise ValueError("TELEGRAM_BOT_TOKEN must be set in environment variables.")
 
     payload = {
-        "chat_id": TELEGRAM_CHAT_ID,
+        "chat_id": chat_id,
         "text": message,
         "parse_mode": "HTML",
         "disable_web_page_preview": False,
     }
 
-    response = requests.post(TELEGRAM_API, json=payload, timeout=10)
+    response = requests.post(TELEGRAM_API, json=payload, timeout=15)
     try:
         response.raise_for_status()
     except requests.HTTPError:
@@ -72,6 +71,38 @@ def build_item_message(query: str, item: dict, index: int, total: int) -> str:
     return "\n\n".join(lines).strip()
 
 
+def execute_and_send_news(chat_id: int | str, query: str | None = None, limit: int = 3, summary: bool = False) -> int:
+    """Fetch news from Talivy and send to Telegram (either as a single summary or batch messages).
+
+    Returns:
+        int: Number of news results sent.
+    """
+    if not query:
+        try:
+            from generate_fact import generate_dynamic_news_query
+            query = generate_dynamic_news_query()
+        except Exception as e:
+            print(f"Failed to generate dynamic query: {e}. Using fallback.")
+            query = "world news at a glance today"
+
+    print(f"Searching Talivy for: {query}")
+    raw_data = talivy_search(query, limit=limit)
+    results = parse_talivy_results(raw_data)
+
+    if summary or not results:
+        message = build_message(query, raw_data, limit=limit)
+        print("Sending news summary to Telegram...")
+        send_telegram_message(chat_id, message)
+        return len(results)
+    else:
+        count = min(limit, len(results))
+        print(f"Sending {count} individual messages to Telegram...")
+        for index, item in enumerate(results[:count], start=1):
+            message = build_item_message(query, item, index, count)
+            send_telegram_message(chat_id, message)
+        return count
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Send Talivy web search results to Telegram.")
     parser.add_argument("--query", default=None, help="Search query to send to Telegram (defaults to a dynamic LLM-generated query)")
@@ -83,33 +114,16 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    if not os.getenv("TALIVY_API_KEY") or not os.getenv("TALIVY_ENDPOINT"):
-        raise ValueError("TALIVY_API_KEY and TALIVY_ENDPOINT must be set to use Talivy.")
+    telegram_chat_id = os.getenv("TELEGRAM_CHAT_ID")
+    if not telegram_chat_id:
+        raise ValueError("TELEGRAM_CHAT_ID must be set in environment variables.")
 
-    query = args.query
-    if not query:
-        try:
-            from generate_fact import generate_dynamic_news_query
-            query = generate_dynamic_news_query()
-        except Exception as e:
-            print(f"Failed to generate dynamic query: {e}. Using fallback.")
-            query = "world news at a glance today"
-
-    print(f"Searching Talivy for: {query}")
-    raw_data = talivy_search(query, limit=args.limit)
-    results = parse_talivy_results(raw_data)
-
-    if args.summary or not results:
-        message = build_message(args.query, raw_data, limit=args.limit)
-        print("Sending news summary to Telegram...")
-        send_telegram_message(message)
-    else:
-        count = min(args.limit, len(results))
-        print(f"Sending {count} individual messages to Telegram...")
-        for index, item in enumerate(results[:count], start=1):
-            message = build_item_message(args.query, item, index, count)
-            send_telegram_message(message)
-
+    execute_and_send_news(
+        chat_id=telegram_chat_id,
+        query=args.query,
+        limit=args.limit,
+        summary=args.summary,
+    )
     print("Done!")
 
 

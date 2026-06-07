@@ -163,11 +163,3 @@ def format_search_results(query: str, data: dict, limit: int = 3) -> str:
         lines.append("")
 
     return "\n".join(lines).strip()
-
-
-def latest_football_news(limit: int = 3) -> tuple[str, dict]:
-    """Fetch the latest football news via Talivy."""
-    query = "latest football news"
-    raw = talivy_search(query, limit=limit)
-    message = format_search_results(query, raw, limit=limit)
-    return message, raw

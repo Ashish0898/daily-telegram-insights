@@ -6,7 +6,6 @@ import os
 import requests
 
 from generate_fact import generate_fact
-from talivy_search import format_search_results, talivy_search
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_API = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
@@ -39,23 +38,6 @@ def send_telegram_message(chat_id: int, text: str) -> None:
 
 
 def build_response(command: str, query: str | None) -> str:
-    if command == "news":
-        search_query = query
-        if not search_query:
-            try:
-                from generate_fact import generate_dynamic_news_query
-                search_query = generate_dynamic_news_query()
-            except Exception as e:
-                print(f"Failed to generate dynamic query: {e}. Using fallback.")
-                search_query = "world news at a glance today"
-        raw = talivy_search(search_query, limit=3)
-        return format_search_results(search_query, raw, limit=3)
-
-    if command == "search":
-        search_query = query or "latest news"
-        raw = talivy_search(search_query, limit=3)
-        return format_search_results(search_query, raw, limit=3)
-
     if command == "help":
         return (
             "Hello! 🤖\n\n"
@@ -80,8 +62,12 @@ def main() -> None:
     command = payload.get("command", "fact")
     query = payload.get("query")
 
-    message = build_response(command, query)
-    send_telegram_message(chat_id, message)
+    if command in ("news", "search"):
+        from send_news import execute_and_send_news
+        execute_and_send_news(chat_id, query, limit=3, summary=False)
+    else:
+        message = build_response(command, query)
+        send_telegram_message(chat_id, message)
 
 
 if __name__ == "__main__":
