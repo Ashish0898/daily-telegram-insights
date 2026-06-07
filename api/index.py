@@ -152,6 +152,15 @@ class handler(BaseHTTPRequestHandler):
             self.send_json(404, {"error": f"Path {self.path} not found"})
 
     def handle_telegram_post(self):
+        # 1. Verify Telegram secret header
+        telegram_secret = os.getenv("TELEGRAM_WEBHOOK_SECRET") or os.getenv("TELEGRAM_SECRET_TOKEN")
+        if telegram_secret:
+            received_secret = self.headers.get('X-Telegram-Bot-Api-Secret-Token')
+            if received_secret != telegram_secret:
+                print("Secret token mismatch. Request ignored.")
+                self.send_json(200, {"ok": True, "reason": "ignored_secret_mismatch"})
+                return
+
         content_length = int(self.headers.get('Content-Length', 0))
         post_data = self.rfile.read(content_length)
         
@@ -165,6 +174,25 @@ class handler(BaseHTTPRequestHandler):
         if not message or "text" not in message:
             self.send_json(200, {"ok": True, "reason": "no_text"})
             return
+
+        # 2. Allowlist Telegram user ID
+        from_user = message.get("from")
+        from_id = from_user.get("id") if from_user else None
+
+        allowed_ids = set()
+        for env_var in ["TELEGRAM_ALLOWED_USER_ID", "TELEGRAM_ALLOWED_USER_IDS", "TELEGRAM_CHAT_ID"]:
+            val = os.getenv(env_var)
+            if val:
+                for chunk in val.split(','):
+                    chunk = chunk.strip()
+                    if chunk:
+                        allowed_ids.add(chunk)
+
+        if allowed_ids:
+            if not from_id or str(from_id) not in allowed_ids:
+                print(f"User ID {from_id} not in allowlist. Request ignored.")
+                self.send_json(200, {"ok": True, "reason": "ignored_user_not_allowlisted"})
+                return
 
         chat = message.get("chat")
         chat_id = chat.get("id") if chat else None
