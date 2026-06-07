@@ -5,7 +5,15 @@ import os
 import requests
 import json
 import random
+import logging
 from datetime import datetime,timezone
+
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s'
+)
+logger = logging.getLogger("generate_fact")
 
 # GitHub LLM API config
 GITHUB_ENDPOINT = "https://models.github.ai/inference"
@@ -58,9 +66,10 @@ def generate_fact():
     top_p = random.uniform(0.75, 0.95)
 
     seed = random.choice(FACT_SEEDS)
-    print(f"Selected seed topic: {seed}")
+    logger.info(f"Selected seed topic: {seed}")
 
     user_content = (
+        f"The current date is {datetime.now(timezone.utc).strftime('%B %Y')}.\n"
         f"Generate one highly interesting, concise, and surprising random fact (max 2 sentences) "
         f"related to this specific topic: '{seed}'.\n\n"
         f"IMPORTANT: {EXCLUDE_CLICHES}\n\n"
@@ -85,7 +94,7 @@ def generate_fact():
     }
 
     try:
-        print(f"API Parameters - Temperature: {temperature:.2f}, Top_p: {top_p:.2f}")
+        logger.info(f"Calling GitHub LLM API (model: {MODEL_NAME}, temperature: {temperature:.2f})")
         response = requests.post(
             f"{GITHUB_ENDPOINT}/chat/completions",
             headers={**headers, "Authorization": f"Bearer {GITHUB_TOKEN}"},
@@ -97,14 +106,14 @@ def generate_fact():
         fact = data["choices"][0]["message"]["content"]
         return fact.strip()
     except Exception as e:
-        print(f"Error calling GitHub LLM API: {e}")
+        logger.error(f"Error calling GitHub LLM API: {e}")
         raise
 
 
 def generate_dynamic_news_query() -> str:
     """Generate a dynamic, interesting news search query using GitHub LLM API."""
     if not GITHUB_TOKEN:
-        print("GITHUB_TOKEN not set, returning fallback query.")
+        logger.warning("GITHUB_TOKEN not set, returning fallback query.")
         return "world news at a glance today"
 
     headers = {
@@ -145,6 +154,7 @@ def generate_dynamic_news_query() -> str:
     }
 
     try:
+        logger.info(f"Calling GitHub LLM API for dynamic news query in category: '{selected_cat}'")
         response = requests.post(
             f"{GITHUB_ENDPOINT}/chat/completions",
             headers=headers,
@@ -155,10 +165,10 @@ def generate_dynamic_news_query() -> str:
         data = response.json()
         query = data["choices"][0]["message"]["content"].strip()
         query = query.strip('\'"`.?! ')
-        print(f"Generated dynamic news query: '{query}'")
+        logger.info(f"Generated dynamic news query: '{query}'")
         return query or "world news at a glance today"
     except Exception as e:
-        print(f"Error calling GitHub LLM API for news query: {e}")
+        logger.error(f"Error calling GitHub LLM API for news query: {e}")
         return "world news at a glance today"
 
 
@@ -176,12 +186,11 @@ def send_telegram_message(message):
     response = requests.post(TELEGRAM_API, json=payload, timeout=10)
     try:
         response.raise_for_status()
-        print("Message sent successfully to Telegram")
+        logger.info("Message sent successfully to Telegram")
         return True
     except requests.HTTPError as e:
         error_body = response.text
-        print(f"Error sending to Telegram: {e}")
-        print(f"Telegram response body: {error_body}")
+        logger.error(f"Error sending to Telegram: {e}, response body: {error_body}")
         raise
 
 
@@ -191,20 +200,20 @@ def main():
         if not GITHUB_TOKEN:
             raise ValueError("GITHUB_TOKEN is not set")
 
-        print("Generating random fact...")
+        logger.info("Generating random fact...")
         fact = generate_fact()
-        print(f"Fact generated: {fact}")
+        logger.info(f"Fact generated: {fact}")
 
         # Format message with emoji and title
         timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
         message = f"<b>🎯 Daily Fact</b>\n\n{fact}\n\n<i>{timestamp}</i>"
 
-        print("Sending to Telegram...")
+        logger.info("Sending to Telegram...")
         send_telegram_message(message)
-        print("Done!")
+        logger.info("Done!")
 
     except Exception as e:
-        print(f"Failed to complete workflow: {e}")
+        logger.error(f"Failed to complete workflow: {e}")
         exit(1)
 
 

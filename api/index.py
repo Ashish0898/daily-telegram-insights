@@ -5,9 +5,17 @@ import re
 import html
 import traceback
 import requests
+import logging
 from datetime import datetime, timezone
 from urllib.parse import urlparse, parse_qs
 from http.server import BaseHTTPRequestHandler
+
+# Configure logging to output to stdout (useful for serverless logs on Vercel)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s'
+)
+logger = logging.getLogger("api")
 
 # Load environment variables from .env file if present
 env_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '.env'))
@@ -157,12 +165,13 @@ class handler(BaseHTTPRequestHandler):
             self.send_json(404, {"error": f"Path {self.path} not found"})
 
     def handle_telegram_post(self):
+        logger.info(f"Incoming POST request to webhook endpoint: {self.path}")
         # 1. Verify Telegram secret header
         telegram_secret = os.getenv("TELEGRAM_WEBHOOK_SECRET") or os.getenv("TELEGRAM_SECRET_TOKEN")
         if telegram_secret:
             received_secret = self.headers.get('X-Telegram-Bot-Api-Secret-Token')
             if received_secret != telegram_secret:
-                print("Secret token mismatch. Request ignored.")
+                logger.warning("Secret token mismatch. Request ignored.")
                 self.send_json(200, {"ok": True, "reason": "ignored_secret_mismatch"})
                 return
 
@@ -172,11 +181,13 @@ class handler(BaseHTTPRequestHandler):
         try:
             body = json.loads(post_data.decode('utf-8'))
         except Exception:
+            logger.error("Failed to parse incoming request body as JSON.")
             self.send_json(400, {"error": "Invalid JSON"})
             return
 
         message = body.get("message") or body.get("edited_message")
         if not message or "text" not in message:
+            logger.info("Ignoring webhook payload: no message body or no text content found.")
             self.send_json(200, {"ok": True, "reason": "no_text"})
             return
 
@@ -195,20 +206,21 @@ class handler(BaseHTTPRequestHandler):
 
         if allowed_ids:
             if not from_id or str(from_id) not in allowed_ids:
-                print(f"User ID {from_id} not in allowlist. Request ignored.")
+                logger.warning(f"User ID {from_id} not in allowlist. Sending Access Denied message and ignoring request.")
                 chat = message.get("chat")
                 chat_id = chat.get("id") if chat else None
                 if chat_id:
                     try:
                         send_telegram_message(chat_id, "⚠️ <b>Access Denied</b>\n\nYou are not authorized to use this bot.")
                     except Exception as e:
-                        print(f"Failed to send access denied message: {e}")
+                        logger.error(f"Failed to send access denied message: {e}")
                 self.send_json(200, {"ok": True, "reason": "ignored_user_not_allowlisted"})
                 return
 
         chat = message.get("chat")
         chat_id = chat.get("id") if chat else None
         if not chat_id:
+            logger.error("Request missing chat ID.")
             self.send_json(400, {"error": "missing_chat_id"})
             return
 
@@ -219,6 +231,7 @@ class handler(BaseHTTPRequestHandler):
             cmd_type = cmd["type"]
             query = cmd["query"]
 
+            logger.info(f"Executing command: {cmd_type} (query: {query}) for chat: {chat_id}")
             if cmd_type in ("news", "search"):
                 execute_and_send_news(chat_id, query, limit=3, summary=False)
             else:
@@ -226,11 +239,13 @@ class handler(BaseHTTPRequestHandler):
                 send_telegram_message(chat_id, response_text)
             self.send_json(200, {"ok": True})
         except Exception as e:
-            traceback.print_exc()
+            logger.exception("Error executing Telegram command webhook")
             self.send_json(500, {"error": str(e)})
 
     def handle_fact_get(self):
+        logger.info("Incoming GET request for daily fact scheduler")
         if not TELEGRAM_CHAT_ID:
+            logger.error("TELEGRAM_CHAT_ID is not configured in environment.")
             self.send_json(500, {"error": "TELEGRAM_CHAT_ID is not set"})
             return
 
@@ -242,11 +257,13 @@ class handler(BaseHTTPRequestHandler):
             send_telegram_message(int(TELEGRAM_CHAT_ID), message)
             self.send_json(200, {"ok": True})
         except Exception as e:
-            traceback.print_exc()
+            logger.exception("Error during daily fact scheduler invocation")
             self.send_json(500, {"error": str(e)})
 
     def handle_news_get(self, query_string: str):
+        logger.info("Incoming GET request for daily news scheduler")
         if not TELEGRAM_CHAT_ID:
+            logger.error("TELEGRAM_CHAT_ID is not configured in environment.")
             self.send_json(500, {"error": "TELEGRAM_CHAT_ID is not set"})
             return
 
@@ -271,7 +288,7 @@ class handler(BaseHTTPRequestHandler):
             mode = "summary" if summary else "batch"
             self.send_json(200, {"ok": True, "mode": mode, "results": count})
         except Exception as e:
-            traceback.print_exc()
+            logger.exception("Error during daily news scheduler invocation")
             self.send_json(500, {"error": str(e)})
 
 if __name__ == '__main__':

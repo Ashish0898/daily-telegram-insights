@@ -51,6 +51,12 @@ def build_response(command: str, query: str | None) -> str:
 
 
 def main() -> None:
+    import logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s [%(levelname)s] %(name)s: %(message)s'
+    )
+
     if not os.getenv("TELEGRAM_BOT_TOKEN"):
         raise ValueError("TELEGRAM_BOT_TOKEN must be set in GitHub Actions environment")
 

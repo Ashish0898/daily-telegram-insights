@@ -5,6 +5,7 @@ import argparse
 import html
 import os
 import requests
+import logging
 from datetime import datetime, timezone
 
 from talivy_search import (
@@ -13,6 +14,8 @@ from talivy_search import (
     format_search_results,
     parse_talivy_results,
 )
+
+logger = logging.getLogger("send_news")
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_API = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage" if TELEGRAM_BOT_TOKEN else ""
@@ -29,13 +32,13 @@ def send_telegram_message(chat_id: int | str, message: str) -> None:
         "disable_web_page_preview": False,
     }
 
+    logger.info(f"Sending message to Telegram chat {chat_id} (size: {len(message)} chars)")
     response = requests.post(TELEGRAM_API, json=payload, timeout=15)
     try:
         response.raise_for_status()
     except requests.HTTPError:
-        print("Telegram request payload:", payload)
-        print("Telegram response status:", response.status_code)
-        print("Telegram response body:", response.text)
+        logger.error(f"Telegram API response status: {response.status_code}")
+        logger.error(f"Telegram response body: {response.text}")
         raise
 
 
@@ -82,21 +85,21 @@ def execute_and_send_news(chat_id: int | str, query: str | None = None, limit: i
             from generate_fact import generate_dynamic_news_query
             query = generate_dynamic_news_query()
         except Exception as e:
-            print(f"Failed to generate dynamic query: {e}. Using fallback.")
+            logger.error(f"Failed to generate dynamic query: {e}. Using fallback.")
             query = "world news at a glance today"
 
-    print(f"Searching Talivy for: {query}")
+    logger.info(f"Searching Talivy for: {query}")
     raw_data = talivy_search(query, limit=limit)
     results = parse_talivy_results(raw_data)
 
     if summary or not results:
         message = build_message(query, raw_data, limit=limit)
-        print("Sending news summary to Telegram...")
+        logger.info("Sending news summary to Telegram...")
         send_telegram_message(chat_id, message)
         return len(results)
     else:
         count = min(limit, len(results))
-        print(f"Sending {count} individual messages to Telegram...")
+        logger.info(f"Sending {count} individual messages to Telegram...")
         for index, item in enumerate(results[:count], start=1):
             message = build_item_message(query, item, index, count)
             send_telegram_message(chat_id, message)
@@ -114,6 +117,12 @@ def main() -> None:
     )
     args = parser.parse_args()
 
+    # If running as command line, configure root logger to output to stdout
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s [%(levelname)s] %(name)s: %(message)s'
+    )
+
     telegram_chat_id = os.getenv("TELEGRAM_CHAT_ID")
     if not telegram_chat_id:
         raise ValueError("TELEGRAM_CHAT_ID must be set in environment variables.")
@@ -124,7 +133,7 @@ def main() -> None:
         limit=args.limit,
         summary=args.summary,
     )
-    print("Done!")
+    logger.info("Done!")
 
 
 if __name__ == "__main__":
