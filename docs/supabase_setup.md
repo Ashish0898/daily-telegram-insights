@@ -1,6 +1,6 @@
-# Supabase Setup Guide for Request Auditing
+# Supabase Setup Guide for Request Auditing & Access Control
 
-To successfully log webhook and cron scheduler requests, you need to create/update the audit table in your Supabase project and configure the environment variables on Vercel and locally.
+To successfully log requests and manage bot access control via the database, you need to create the required tables in your Supabase project and configure the environment variables on Vercel and locally.
 
 ---
 
@@ -41,7 +41,32 @@ on request_audit (endpoint, created_at desc);
 
 ---
 
-## 2. Configure Environment Variables
+## 2. Create the Allowed Users Table (Access Control)
+
+You can manage which Telegram users have access to use the bot dynamically via database records, without redeploying Vercel code or modifying environment variables.
+
+Run this SQL script in your Supabase **SQL Editor**:
+
+```sql
+-- Create allowed_users table
+create table allowed_users (
+  user_id bigint primary key,            -- Telegram User ID
+  username text,                         -- Telegram username (for reference)
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+  added_by text default current_user
+);
+
+-- Example: Add yourself to the allowlist (replace with your Telegram User ID)
+insert into allowed_users (user_id, username) 
+values (973133568, 'your_telegram_username');
+```
+
+> [!TIP]
+> The bot implements a **graceful fallback**: if the `allowed_users` table is empty or does not exist, it automatically falls back to validating users against the `TELEGRAM_ALLOWED_USER_ID`, `TELEGRAM_ALLOWED_USER_IDS`, and `TELEGRAM_CHAT_ID` environment variables in Vercel.
+
+---
+
+## 3. Configure Environment Variables
 
 For the Supabase client in [db.py](file:///mnt/c/Users/Ashish/Downloads/playground/daily-telegram-insights/src/db.py) to connect, define the following variables:
 

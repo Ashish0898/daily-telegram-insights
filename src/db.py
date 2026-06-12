@@ -71,3 +71,25 @@ def log_request(
         logger.info(f"Successfully logged request metadata to Supabase for endpoint: {endpoint}")
     except Exception as e:
         logger.error(f"Failed to insert audit log into Supabase: {e}")
+
+def is_user_allowed(user_id: int) -> bool:
+    """
+    Checks if a Telegram user ID is present in the 'allowed_users' table in Supabase.
+    Returns:
+        True: if the user exists in the allowed list database.
+        False: if the table was queried successfully but the user is not present.
+        None: if the database is not configured, table doesn't exist, or query fails
+              (triggers fallback to environment variables allowlist).
+    """
+    client = get_supabase_client()
+    if not client:
+        return None
+
+    try:
+        response = client.table("allowed_users").select("user_id").eq("user_id", user_id).execute()
+        if response.data is not None:
+            return len(response.data) > 0
+    except Exception as e:
+        logger.warning(f"Could not query 'allowed_users' table in Supabase: {e}. Falling back to env variables.")
+        return None
+    return None

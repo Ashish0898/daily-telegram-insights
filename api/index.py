@@ -40,7 +40,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 's
 from src.generate_fact import generate_fact, generate_dynamic_news_query
 from src.send_news import execute_and_send_news
 from src.talivy_search import talivy_search, format_search_results, parse_talivy_results, clean_text_for_telegram
-from src.db import log_request
+from src.db import log_request, is_user_allowed
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
@@ -237,34 +237,46 @@ class handler(BaseHTTPRequestHandler):
         chat_id = chat.get("id") if chat else None
         command_text = message.get("text", "")
 
-        allowed_ids = set()
-        for env_var in ["TELEGRAM_ALLOWED_USER_ID", "TELEGRAM_ALLOWED_USER_IDS", "TELEGRAM_CHAT_ID"]:
-            val = os.getenv(env_var)
-            if val:
-                for chunk in val.split(','):
-                    chunk = chunk.strip()
-                    if chunk:
-                        allowed_ids.add(chunk)
+        # Check allowlist in Supabase allowed_users table
+        is_allowed = is_user_allowed(from_id) if from_id is not None else None
 
-        if allowed_ids:
-            if not from_id or str(from_id) not in allowed_ids:
-                logger.warning(f"User ID {from_id} not in allowlist. Sending Access Denied message and ignoring request.")
-                if chat_id:
-                    try:
-                        send_telegram_message(chat_id, "⚠️ <b>Access Denied</b>\n\nYou are not authorized to use this bot.")
-                    except Exception as e:
-                        logger.error(f"Failed to send access denied message: {e}")
-                self.send_json(200, {"ok": True, "reason": "ignored_user_not_allowlisted"})
-                log_request(
-                    endpoint="webhook",
-                    status="access_denied",
-                    user_id=user_id,
-                    username=username,
-                    chat_id=chat_id,
-                    command=command_text,
-                    execution_time_ms=int((time.time() - start_time) * 1000)
-                )
-                return
+        if is_allowed is False:
+            access_denied = True
+        elif is_allowed is True:
+            access_denied = False
+        else:
+            # Fallback to checking environment variables
+            allowed_ids = set()
+            for env_var in ["TELEGRAM_ALLOWED_USER_ID", "TELEGRAM_ALLOWED_USER_IDS", "TELEGRAM_CHAT_ID"]:
+                val = os.getenv(env_var)
+                if val:
+                    for chunk in val.split(','):
+                        chunk = chunk.strip()
+                        if chunk:
+                            allowed_ids.add(chunk)
+            if allowed_ids:
+                access_denied = not from_id or str(from_id) not in allowed_ids
+            else:
+                access_denied = False
+
+        if access_denied:
+            logger.warning(f"User ID {from_id} not in allowlist. Sending Access Denied message and ignoring request.")
+            if chat_id:
+                try:
+                    send_telegram_message(chat_id, "⚠️ <b>Access Denied</b>\n\nYou are not authorized to use this bot.")
+                except Exception as e:
+                    logger.error(f"Failed to send access denied message: {e}")
+            self.send_json(200, {"ok": True, "reason": "ignored_user_not_allowlisted"})
+            log_request(
+                endpoint="webhook",
+                status="access_denied",
+                user_id=user_id,
+                username=username,
+                chat_id=chat_id,
+                command=command_text,
+                execution_time_ms=int((time.time() - start_time) * 1000)
+            )
+            return
 
         if not chat_id:
             logger.error("Request missing chat ID.")
