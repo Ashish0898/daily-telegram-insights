@@ -9,6 +9,7 @@ Automatically send a daily random fact and dynamic web news updates to Telegram 
 - 🔒 **Webhook Security Middleware**:
   - **Secret Token Verification**: Authenticates incoming requests from Telegram using a secret webhook token.
   - **User Allowlisting**: Restricts bot access to specific Telegram user IDs. Responds to unauthorized users with a clean Access Denied message and halts processing immediately to save API quotas.
+- 📊 **Request Auditing**: Logs execution statistics, query topics, bot responses, and performance metrics directly to a Supabase database. See [Supabase Setup Guide](docs/supabase_setup.md) for details.
 - ⚡ **Minimal dependencies & high speed** for low execution overhead.
 - 🧪 **Scheduled or Manual triggers** via GitHub Actions or Vercel Crons.
 
@@ -30,51 +31,20 @@ If running facts via GitHub Actions, add these secrets (Settings → Secrets and
 
 The bot can run as an interactive serverless webhook handler on Vercel.
 
-### Deploy the webhook endpoint
+### Deploy the Webhook Endpoint
 
-Create a Vercel project from this repository and add these environment variables:
+Create a Vercel project from this repository and add your environment variables.
 
-#### Core Config
-- `GITHUB_TOKEN` - Your GitHub API key for LLM access
-- `TELEGRAM_BOT_TOKEN` - Your Telegram bot token
-- `TELEGRAM_CHAT_ID` - Your default Telegram chat ID (for scheduled messages)
+#### Core Configuration
+- `GITHUB_TOKEN` - Your GitHub API key for LLM access.
+- `TELEGRAM_BOT_TOKEN` - Your Telegram bot token (from @BotFather).
+- `TELEGRAM_CHAT_ID` - Your default Telegram chat ID (used for scheduled messages).
 
-#### Webhook Security (Recommended)
-- `TELEGRAM_WEBHOOK_SECRET` (or `TELEGRAM_SECRET_TOKEN`) - A custom secret string (like a UUID) to authenticate incoming requests from Telegram.
-- `TELEGRAM_ALLOWED_USER_ID` - Your personal Telegram user ID to allowlist yourself.
-- `TELEGRAM_ALLOWED_USER_IDS` - Comma-separated list of multiple allowed Telegram user IDs (alternative/addition to the above).
+#### Webhook Security & Access Control
+All instructions to generate a webhook secret token, register webhook URLs, and configure user allowlists have been moved to the **[Telegram Webhook & Security Setup Guide](docs/telegram_webhook_setup.md)**.
 
-#### Talivy Search Config
-- `TALIVY_API_KEY` - Your Talivy API key
-- `TALIVY_ENDPOINT` - Talivy search endpoint URL
-- `NEWS_QUERY` (optional) - Overrides the LLM-generated dynamic query with a fixed query
-- `NEWS_LIMIT` (optional) - Number of news results to fetch (default: `5`)
-- `NEWS_SUMMARY` (optional) - Set to `true` to deliver as a single summary message instead of separate posts
-
----
-
-### Security Configuration
-
-#### 1. Generate a Webhook Secret Token
-You can generate a secure UUID string to use as your secret token:
-```bash
-# In your terminal
-uuidgen
-# Or via Python
-python3 -c "import uuid; print(uuid.uuid4())"
-```
-Set this generated string as the `TELEGRAM_WEBHOOK_SECRET` environment variable in Vercel.
-
-#### 2. Set the Telegram Webhook with Secret Token
-Point Telegram to your Vercel deployment URL and include the `secret_token` parameter:
-```bash
-curl -X POST "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/setWebhook?url=https://<your-vercel-host>.vercel.app/api/telegram&secret_token=<YOUR_SECRET_TOKEN>"
-```
-
-#### 3. How the Allowlist Works
-* If any allowlist variable (`TELEGRAM_ALLOWED_USER_ID`, `TELEGRAM_ALLOWED_USER_IDS`, or `TELEGRAM_CHAT_ID` if positive) is set, the bot will verify the sender's Telegram user ID (`message.from.id`).
-* If an unauthorized user attempts to message the bot, it replies with `⚠️ Access Denied\n\nYou are not authorized to use this bot.` and immediately terminates execution.
-* If a request does not contain the correct `X-Telegram-Bot-Api-Secret-Token` header, it is rejected silently to prevent spam/reconnaissance.
+#### Talivy Search Configuration
+To query live news digests and custom searches using the Talivy API, refer to the **[Talivy Search Integration Guide](docs/talivy_setup.md)** for configuration details.
 
 ---
 
@@ -94,6 +64,16 @@ Vercel will automatically run the scheduled endpoints defined in `vercel.json`:
 - `/news <query>` — search Talivy for a specific query
 - `/search <query>` — search Talivy for a custom topic
 - `/help` — show help text
+
+---
+
+## Request Auditing (Supabase)
+
+The bot logs all webhook inputs, scheduled triggers, response contents, and performance metrics to a Supabase database for tracking and analytics.
+
+To set up request auditing:
+1. Follow the database schema and configurations in [Supabase Setup Guide](docs/supabase_setup.md).
+2. Set the `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` environment variables.
 
 ---
 
