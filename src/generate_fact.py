@@ -55,7 +55,7 @@ EXCLUDE_CLICHES = (
 )
 
 
-def generate_fact():
+def generate_fact(return_topic=False):
     """Generate a random fact using GitHub LLM API."""
     headers = {
         "Content-Type": "application/json",
@@ -104,6 +104,8 @@ def generate_fact():
         response.raise_for_status()
         data = response.json()
         fact = data["choices"][0]["message"]["content"]
+        if return_topic:
+            return fact.strip(), seed
         return fact.strip()
     except Exception as e:
         logger.error(f"Error calling GitHub LLM API: {e}")

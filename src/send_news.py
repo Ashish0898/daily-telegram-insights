@@ -74,11 +74,11 @@ def build_item_message(query: str, item: dict, index: int, total: int) -> str:
     return "\n\n".join(lines).strip()
 
 
-def execute_and_send_news(chat_id: int | str, query: str | None = None, limit: int = 3, summary: bool = False) -> int:
+def execute_and_send_news(chat_id: int | str, query: str | None = None, limit: int = 3, summary: bool = False):
     """Fetch news from Talivy and send to Telegram (either as a single summary or batch messages).
 
     Returns:
-        int: Number of news results sent.
+        tuple: (count of news results sent, final search query used, list of message texts sent)
     """
     if not query:
         try:
@@ -92,18 +92,21 @@ def execute_and_send_news(chat_id: int | str, query: str | None = None, limit: i
     raw_data = talivy_search(query, limit=limit)
     results = parse_talivy_results(raw_data)
 
+    sent_texts = []
     if summary or not results:
         message = build_message(query, raw_data, limit=limit)
         logger.info("Sending news summary to Telegram...")
         send_telegram_message(chat_id, message)
-        return len(results)
+        sent_texts.append(message)
+        return len(results), query, sent_texts
     else:
         count = min(limit, len(results))
         logger.info(f"Sending {count} individual messages to Telegram...")
         for index, item in enumerate(results[:count], start=1):
             message = build_item_message(query, item, index, count)
             send_telegram_message(chat_id, message)
-        return count
+            sent_texts.append(message)
+        return count, query, sent_texts
 
 
 def main() -> None:

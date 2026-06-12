@@ -6,6 +6,7 @@ import html
 import traceback
 import requests
 import logging
+import time
 from datetime import datetime, timezone
 from urllib.parse import urlparse, parse_qs
 from http.server import BaseHTTPRequestHandler
@@ -39,6 +40,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 's
 from src.generate_fact import generate_fact, generate_dynamic_news_query
 from src.send_news import execute_and_send_news
 from src.talivy_search import talivy_search, format_search_results, parse_talivy_results, clean_text_for_telegram
+from src.db import log_request
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
@@ -82,17 +84,18 @@ def build_help_message() -> str:
         "Use /help to show this message again."
     )
 
-def get_response_text(cmd: dict) -> str:
+def get_response_text(cmd: dict) -> tuple:
     cmd_type = cmd["type"]
     query = cmd["query"]
 
     if cmd_type == "help":
-        return build_help_message()
+        return build_help_message(), "help"
 
     if cmd_type == "fact":
-        fact = html.escape(generate_fact(), quote=False)
+        fact, seed = generate_fact(return_topic=True)
+        fact_escaped = html.escape(fact, quote=False)
         timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-        return f"<b>🎯 Daily Fact</b>\n\n{fact}\n\n<i>{timestamp}</i>"
+        return f"<b>🎯 Daily Fact</b>\n\n{fact_escaped}\n\n<i>{timestamp}</i>", seed
 
     if cmd_type == "news" and not query:
         search_query = generate_dynamic_news_query()
@@ -101,9 +104,10 @@ def get_response_text(cmd: dict) -> str:
 
     try:
         raw = talivy_search(search_query, limit=3)
-        return format_search_results(search_query, raw, limit=3)
+        formatted = format_search_results(search_query, raw, limit=3)
+        return formatted, search_query
     except Exception as e:
-        return f"Error performing search for '{search_query}': {str(e)}"
+        return f"Error performing search for '{search_query}': {str(e)}", search_query
 
 def send_telegram_message(chat_id: int, text: str) -> None:
     if not TELEGRAM_BOT_TOKEN:
@@ -165,14 +169,26 @@ class handler(BaseHTTPRequestHandler):
             self.send_json(404, {"error": f"Path {self.path} not found"})
 
     def handle_telegram_post(self):
+        start_time = time.time()
         logger.info(f"Incoming POST request to webhook endpoint: {self.path}")
-        # 1. Verify Telegram secret header
+        
+        # Initialize variables for database logging
+        user_id = None
+        username = None
+        chat_id = None
+        command_text = None
+
         telegram_secret = os.getenv("TELEGRAM_WEBHOOK_SECRET") or os.getenv("TELEGRAM_SECRET_TOKEN")
         if telegram_secret:
             received_secret = self.headers.get('X-Telegram-Bot-Api-Secret-Token')
             if received_secret != telegram_secret:
                 logger.warning("Secret token mismatch. Request ignored.")
                 self.send_json(200, {"ok": True, "reason": "ignored_secret_mismatch"})
+                log_request(
+                    endpoint="webhook",
+                    status="ignored_secret_mismatch",
+                    execution_time_ms=int((time.time() - start_time) * 1000)
+                )
                 return
 
         content_length = int(self.headers.get('Content-Length', 0))
@@ -180,20 +196,46 @@ class handler(BaseHTTPRequestHandler):
         
         try:
             body = json.loads(post_data.decode('utf-8'))
-        except Exception:
+        except Exception as e:
             logger.error("Failed to parse incoming request body as JSON.")
             self.send_json(400, {"error": "Invalid JSON"})
+            log_request(
+                endpoint="webhook",
+                status="invalid_json",
+                error_message=str(e),
+                execution_time_ms=int((time.time() - start_time) * 1000)
+            )
             return
 
         message = body.get("message") or body.get("edited_message")
         if not message or "text" not in message:
             logger.info("Ignoring webhook payload: no message body or no text content found.")
             self.send_json(200, {"ok": True, "reason": "no_text"})
+            if message:
+                chat = message.get("chat")
+                chat_id = chat.get("id") if chat else None
+                from_user = message.get("from")
+                user_id = from_user.get("id") if from_user else None
+                username = from_user.get("username") if from_user else None
+            log_request(
+                endpoint="webhook",
+                status="ignored_no_text",
+                user_id=user_id,
+                username=username,
+                chat_id=chat_id,
+                execution_time_ms=int((time.time() - start_time) * 1000)
+            )
             return
 
         # 2. Allowlist Telegram user ID
         from_user = message.get("from")
         from_id = from_user.get("id") if from_user else None
+        user_id = from_id
+        username = from_user.get("username") if from_user else None
+
+        chat = message.get("chat")
+        chat_id = chat.get("id") if chat else None
+        command_text = message.get("text", "")
 
         allowed_ids = set()
         for env_var in ["TELEGRAM_ALLOWED_USER_ID", "TELEGRAM_ALLOWED_USER_IDS", "TELEGRAM_CHAT_ID"]:
@@ -207,64 +249,130 @@ class handler(BaseHTTPRequestHandler):
         if allowed_ids:
             if not from_id or str(from_id) not in allowed_ids:
                 logger.warning(f"User ID {from_id} not in allowlist. Sending Access Denied message and ignoring request.")
-                chat = message.get("chat")
-                chat_id = chat.get("id") if chat else None
                 if chat_id:
                     try:
                         send_telegram_message(chat_id, "⚠️ <b>Access Denied</b>\n\nYou are not authorized to use this bot.")
                     except Exception as e:
                         logger.error(f"Failed to send access denied message: {e}")
                 self.send_json(200, {"ok": True, "reason": "ignored_user_not_allowlisted"})
+                log_request(
+                    endpoint="webhook",
+                    status="access_denied",
+                    user_id=user_id,
+                    username=username,
+                    chat_id=chat_id,
+                    command=command_text,
+                    execution_time_ms=int((time.time() - start_time) * 1000)
+                )
                 return
 
-        chat = message.get("chat")
-        chat_id = chat.get("id") if chat else None
         if not chat_id:
             logger.error("Request missing chat ID.")
             self.send_json(400, {"error": "missing_chat_id"})
+            log_request(
+                endpoint="webhook",
+                status="missing_chat_id",
+                user_id=user_id,
+                username=username,
+                command=command_text,
+                execution_time_ms=int((time.time() - start_time) * 1000)
+            )
             return
 
-        text = message.get("text", "")
-        
         try:
-            cmd = parse_command(text)
+            cmd = parse_command(command_text)
             cmd_type = cmd["type"]
             query = cmd["query"]
 
             logger.info(f"Executing command: {cmd_type} (query: {query}) for chat: {chat_id}")
             if cmd_type in ("news", "search"):
-                execute_and_send_news(chat_id, query, limit=3, summary=False)
+                count, final_query, sent_texts = execute_and_send_news(chat_id, query, limit=3, summary=False)
+                response_text = "\n\n---\n\n".join(sent_texts)
+                topic = final_query
             else:
-                response_text = get_response_text(cmd)
+                response_text, topic = get_response_text(cmd)
                 send_telegram_message(chat_id, response_text)
             self.send_json(200, {"ok": True})
+            log_request(
+                endpoint="webhook",
+                status="success",
+                user_id=user_id,
+                username=username,
+                chat_id=chat_id,
+                command=command_text,
+                response_content=response_text,
+                topic=topic,
+                execution_time_ms=int((time.time() - start_time) * 1000)
+            )
         except Exception as e:
             logger.exception("Error executing Telegram command webhook")
             self.send_json(500, {"error": str(e)})
+            log_request(
+                endpoint="webhook",
+                status="error",
+                user_id=user_id,
+                username=username,
+                chat_id=chat_id,
+                command=command_text,
+                error_message=str(e),
+                execution_time_ms=int((time.time() - start_time) * 1000)
+            )
 
     def handle_fact_get(self):
+        start_time = time.time()
         logger.info("Incoming GET request for daily fact scheduler")
         if not TELEGRAM_CHAT_ID:
             logger.error("TELEGRAM_CHAT_ID is not configured in environment.")
             self.send_json(500, {"error": "TELEGRAM_CHAT_ID is not set"})
+            log_request(
+                endpoint="fact_scheduler",
+                status="error",
+                error_message="TELEGRAM_CHAT_ID is not set",
+                execution_time_ms=int((time.time() - start_time) * 1000)
+            )
             return
 
         try:
-            fact = html.escape(generate_fact(), quote=False)
+            fact, seed = generate_fact(return_topic=True)
+            fact_escaped = html.escape(fact, quote=False)
             timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-            message = f"<b>🎯 Daily Fact</b>\n\n{fact}\n\n<i>{timestamp}</i>"
+            message = f"<b>🎯 Daily Fact</b>\n\n{fact_escaped}\n\n<i>{timestamp}</i>"
 
             send_telegram_message(int(TELEGRAM_CHAT_ID), message)
             self.send_json(200, {"ok": True})
+            log_request(
+                endpoint="fact_scheduler",
+                status="success",
+                chat_id=int(TELEGRAM_CHAT_ID),
+                command="scheduler_run",
+                response_content=message,
+                topic=seed,
+                execution_time_ms=int((time.time() - start_time) * 1000)
+            )
         except Exception as e:
             logger.exception("Error during daily fact scheduler invocation")
             self.send_json(500, {"error": str(e)})
+            log_request(
+                endpoint="fact_scheduler",
+                status="error",
+                chat_id=int(TELEGRAM_CHAT_ID) if TELEGRAM_CHAT_ID else None,
+                command="scheduler_run",
+                error_message=str(e),
+                execution_time_ms=int((time.time() - start_time) * 1000)
+            )
 
     def handle_news_get(self, query_string: str):
+        start_time = time.time()
         logger.info("Incoming GET request for daily news scheduler")
         if not TELEGRAM_CHAT_ID:
             logger.error("TELEGRAM_CHAT_ID is not configured in environment.")
             self.send_json(500, {"error": "TELEGRAM_CHAT_ID is not set"})
+            log_request(
+                endpoint="news_scheduler",
+                status="error",
+                error_message="TELEGRAM_CHAT_ID is not set",
+                execution_time_ms=int((time.time() - start_time) * 1000)
+            )
             return
 
         query_params = parse_qs(query_string)
@@ -278,18 +386,38 @@ class handler(BaseHTTPRequestHandler):
         summary_str = query_params.get("summary", [None])[0] or os.getenv("NEWS_SUMMARY") or "false"
         summary = summary_str.lower() == "true"
 
+        command_desc = f"query={query}, limit={limit}, summary={summary}"
+
         try:
-            count = execute_and_send_news(
+            count, final_query, sent_texts = execute_and_send_news(
                 chat_id=int(TELEGRAM_CHAT_ID),
                 query=query,
                 limit=limit,
                 summary=summary
             )
+            response_content = "\n\n---\n\n".join(sent_texts)
             mode = "summary" if summary else "batch"
             self.send_json(200, {"ok": True, "mode": mode, "results": count})
+            log_request(
+                endpoint="news_scheduler",
+                status="success",
+                chat_id=int(TELEGRAM_CHAT_ID),
+                command=command_desc,
+                response_content=response_content,
+                topic=final_query,
+                execution_time_ms=int((time.time() - start_time) * 1000)
+            )
         except Exception as e:
             logger.exception("Error during daily news scheduler invocation")
             self.send_json(500, {"error": str(e)})
+            log_request(
+                endpoint="news_scheduler",
+                status="error",
+                chat_id=int(TELEGRAM_CHAT_ID),
+                command=command_desc,
+                error_message=str(e),
+                execution_time_ms=int((time.time() - start_time) * 1000)
+            )
 
 if __name__ == '__main__':
     from http.server import HTTPServer
