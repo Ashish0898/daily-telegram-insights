@@ -63,6 +63,8 @@ Vercel will automatically run the scheduled endpoints defined in `vercel.json`:
 - `/news` — generate a dynamic news query via LLM and search Talivy
 - `/news <query>` — search Talivy for a specific query
 - `/search <query>` — search Talivy for a custom topic
+- `/allow <user_id> [role] [username]` — allow a user to access the bot (admin only)
+- `/revoke <user_id>` — revoke access for a user (admin only)
 - `/help` — show help text
 
 ---

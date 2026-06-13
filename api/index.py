@@ -40,7 +40,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 's
 from src.generate_fact import generate_fact, generate_dynamic_news_query
 from src.send_news import execute_and_send_news
 from src.talivy_search import talivy_search, format_search_results, parse_talivy_results, clean_text_for_telegram
-from src.db import log_request, is_user_allowed
+from src.db import log_request, is_user_allowed, is_user_admin, allow_user, revoke_user
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
@@ -73,23 +73,45 @@ def parse_command(text: str) -> dict:
     if normalized.startswith("/help") or normalized.startswith("/start"):
         return {"type": "help", "query": None}
 
+    if normalized.startswith("/allow"):
+        query = re.sub(r"^/allow(@\w+)?\s*", "", trimmed, flags=re.IGNORECASE).strip()
+        return {
+            "type": "allow",
+            "query": query or None,
+        }
+
+    if normalized.startswith("/revoke"):
+        query = re.sub(r"^/revoke(@\w+)?\s*", "", trimmed, flags=re.IGNORECASE).strip()
+        return {
+            "type": "revoke",
+            "query": query or None,
+        }
+
     return {"type": "fact", "query": None}
 
-def build_help_message() -> str:
-    return (
+
+def build_help_message(is_admin: bool = False) -> str:
+    msg = (
         "Hello! 🤖\n\n"
         "Use /fact to receive a new random fact.\n"
         "Use /news to get a dynamic daily news digest, or /news &lt;query&gt; for a specific topic.\n"
         "Use /search &lt;query&gt; to search Talivy for custom web results.\n"
         "Use /help to show this message again."
     )
+    if is_admin:
+        msg += (
+            "\n\n🛡️ <b>Admin Commands:</b>\n"
+            "• <code>/allow &lt;user_id&gt; [role] [username]</code> - Allow a user\n"
+            "• <code>/revoke &lt;user_id&gt;</code> - Revoke access for a user"
+        )
+    return msg
 
-def get_response_text(cmd: dict) -> tuple:
+def get_response_text(cmd: dict, is_admin: bool = False) -> tuple:
     cmd_type = cmd["type"]
     query = cmd["query"]
 
     if cmd_type == "help":
-        return build_help_message(), "help"
+        return build_help_message(is_admin), "help"
 
     if cmd_type == "fact":
         fact, seed = generate_fact(return_topic=True)
@@ -297,12 +319,104 @@ class handler(BaseHTTPRequestHandler):
             query = cmd["query"]
 
             logger.info(f"Executing command: {cmd_type} (query: {query}) for chat: {chat_id}")
+
+            is_admin = is_user_admin(from_id) if from_id is not None else False
+
+            if cmd_type in ("allow", "revoke") and not is_admin:
+                logger.warning(f"Unauthorized admin command attempt from user ID {from_id}")
+                response_text = "⚠️ <b>Access Denied</b>\n\nYou must be an admin to perform this action."
+                send_telegram_message(chat_id, response_text)
+                self.send_json(200, {"ok": True})
+                log_request(
+                    endpoint="webhook",
+                    status="admin_denied",
+                    user_id=user_id,
+                    username=username,
+                    chat_id=chat_id,
+                    command=command_text,
+                    response_content=response_text,
+                    execution_time_ms=int((time.time() - start_time) * 1000)
+                )
+                return
+
             if cmd_type in ("news", "search"):
                 count, final_query, sent_texts = execute_and_send_news(chat_id, query, limit=3, summary=False)
                 response_text = "\n\n---\n\n".join(sent_texts)
                 topic = final_query
+            elif cmd_type == "allow":
+                if not query:
+                    response_text = (
+                        "⚠️ <b>Usage:</b>\n"
+                        "<code>/allow &lt;user_id&gt; [role] [username]</code>\n\n"
+                        "Example:\n"
+                        "<code>/allow 123456789 admin</code>"
+                    )
+                else:
+                    parts = query.split()
+                    target_id_str = parts[0]
+                    try:
+                        target_id = int(target_id_str)
+                        role = "regular"
+                        target_username = None
+
+                        if len(parts) == 2:
+                            val = parts[1]
+                            if val.lower() in ("admin", "regular"):
+                                role = val.lower()
+                            else:
+                                target_username = val
+                        elif len(parts) >= 3:
+                            val1 = parts[1]
+                            val2 = parts[2]
+                            if val1.lower() in ("admin", "regular"):
+                                role = val1.lower()
+                                target_username = val2
+                            elif val2.lower() in ("admin", "regular"):
+                                role = val2.lower()
+                                target_username = val1
+                            else:
+                                target_username = val1
+                        
+                        if target_username:
+                            target_username = target_username.lstrip('@')
+
+                        success = allow_user(target_id, username=target_username, role=role)
+                        if success:
+                            response_text = f"✅ <b>User Allowed Successfully</b>\n\n• <b>User ID:</b> <code>{target_id}</code>\n• <b>Role:</b> {role}"
+                            if target_username:
+                                response_text += f"\n• <b>Username:</b> @{target_username}"
+                        else:
+                            response_text = f"❌ <b>Error:</b> Failed to update user <code>{target_id}</code> in database."
+                    except ValueError:
+                        response_text = "❌ <b>Error:</b> User ID must be a valid integer."
+                
+                send_telegram_message(chat_id, response_text)
+                topic = f"allow_user_{query}"
+            elif cmd_type == "revoke":
+                if not query:
+                    response_text = (
+                        "⚠️ <b>Usage:</b>\n"
+                        "<code>/revoke &lt;user_id&gt;</code>\n\n"
+                        "Example:\n"
+                        "<code>/revoke 123456789</code>"
+                    )
+                else:
+                    parts = query.split()
+                    target_id_str = parts[0]
+                    try:
+                        target_id = int(target_id_str)
+                        success = revoke_user(target_id)
+                        if success:
+                            response_text = f"🚫 <b>User Revoked</b>\n\nUser ID <code>{target_id}</code> has been deactivated. They will no longer have access to the bot."
+                        else:
+                            response_text = f"❌ <b>Error:</b> Failed to deactivate user <code>{target_id}</code> in database."
+                    except ValueError:
+                        response_text = "❌ <b>Error:</b> User ID must be a valid integer."
+                
+                send_telegram_message(chat_id, response_text)
+                topic = f"revoke_user_{query}"
             else:
-                response_text, topic = get_response_text(cmd)
+                response_text, topic = get_response_text(cmd, is_admin=is_admin)
                 send_telegram_message(chat_id, response_text)
             self.send_json(200, {"ok": True})
             log_request(

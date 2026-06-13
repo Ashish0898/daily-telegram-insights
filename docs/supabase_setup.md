@@ -45,20 +45,33 @@ on request_audit (endpoint, created_at desc);
 
 You can manage which Telegram users have access to use the bot dynamically via database records, without redeploying Vercel code or modifying environment variables.
 
-Run this SQL script in your Supabase **SQL Editor**:
+### Clean Setup SQL
+Run this SQL script in your Supabase **SQL Editor** if creating the table for the first time:
 
 ```sql
 -- Create allowed_users table
 create table allowed_users (
   user_id bigint primary key,            -- Telegram User ID
   username text,                         -- Telegram username (for reference)
+  role text default 'regular' check (role in ('admin', 'regular')), -- User role (admin or regular)
+  is_active boolean default true not null, -- Active status (true = allowed, false = revoked)
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   added_by text default current_user
 );
 
--- Example: Add yourself to the allowlist (replace with your Telegram User ID)
-insert into allowed_users (user_id, username) 
-values (973133568, 'your_telegram_username');
+-- Example: Add yourself as an admin (replace with your Telegram User ID)
+insert into allowed_users (user_id, username, role, is_active) 
+values (973133568, 'your_telegram_username', 'admin', true);
+```
+
+### Migration SQL (For Existing Tables)
+If you already created the `allowed_users` table, run this SQL script to add the new columns:
+
+```sql
+-- Add role and is_active columns to allowed_users
+alter table allowed_users 
+  add column if not exists role text default 'regular' check (role in ('admin', 'regular')),
+  add column if not exists is_active boolean default true not null;
 ```
 
 > [!TIP]
