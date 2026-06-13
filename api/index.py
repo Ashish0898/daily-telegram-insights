@@ -101,8 +101,8 @@ def build_help_message(is_admin: bool = False) -> str:
     if is_admin:
         msg += (
             "\n\n🛡️ <b>Admin Commands:</b>\n"
-            "• <code>/allow &lt;user_id&gt; [role] [username]</code> - Allow a user\n"
-            "• <code>/revoke &lt;user_id&gt;</code> - Revoke access for a user"
+            "Use /allow &lt;user_id&gt; [role] [username] to add or update allowed users.\n"
+            "Use /revoke &lt;user_id&gt; to revoke access for a user."
         )
     return msg
 
