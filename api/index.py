@@ -40,7 +40,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 's
 from src.generate_fact import generate_fact, generate_dynamic_news_query
 from src.send_news import execute_and_send_news
 from src.talivy_search import talivy_search, format_search_results, parse_talivy_results, clean_text_for_telegram
-from src.db import log_request, is_user_allowed, is_user_admin, allow_user, revoke_user
+from src.db import log_request, is_user_allowed, is_user_admin, allow_user, revoke_user, register_inactive_user_if_new, resolve_user_details
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
@@ -101,8 +101,8 @@ def build_help_message(is_admin: bool = False) -> str:
     if is_admin:
         msg += (
             "\n\n🛡️ <b>Admin Commands:</b>\n"
-            "Use /allow &lt;user_id&gt; [role] [username] to add or update allowed users.\n"
-            "Use /revoke &lt;user_id&gt; to revoke access for a user."
+            "Use /allow &lt;user_id_or_username&gt; [role] to allow a user (role defaults to 'regular').\n"
+            "Use /revoke &lt;user_id_or_username&gt; to revoke access for a user."
         )
     return msg
 
@@ -262,6 +262,27 @@ class handler(BaseHTTPRequestHandler):
         # Check allowlist in Supabase allowed_users table
         is_allowed = is_user_allowed(from_id) if from_id is not None else None
 
+        # Check if the command is /start
+        is_start_command = False
+        if command_text:
+            is_start_command = command_text.strip().lower().startswith("/start")
+
+        if is_allowed is None and from_id is not None and is_start_command:
+            # Check if they are already allowed via environment variables fallback
+            allowed_ids = set()
+            for env_var in ["TELEGRAM_ALLOWED_USER_ID", "TELEGRAM_ALLOWED_USER_IDS", "TELEGRAM_CHAT_ID"]:
+                val = os.getenv(env_var)
+                if val:
+                    for chunk in val.split(','):
+                        chunk = chunk.strip()
+                        if chunk:
+                            allowed_ids.add(chunk)
+            
+            # If not in env vars allowlist, register as inactive in db
+            if not (allowed_ids and str(from_id) in allowed_ids):
+                register_inactive_user_if_new(from_id, username)
+                is_allowed = False
+
         if is_allowed is False:
             access_denied = True
         elif is_allowed is True:
@@ -283,7 +304,10 @@ class handler(BaseHTTPRequestHandler):
 
         if access_denied:
             logger.warning(f"User ID {from_id} not in allowlist. Sending Access Denied message and ignoring request.")
-            response_text = "⚠️ <b>Access Denied</b>\n\nYou are not authorized to use this bot."
+            if from_id:
+                response_text = f"⚠️ <b>Access Denied</b>\n\nYou are not authorized to use this bot. Please contact the administrator with your User ID: <code>{from_id}</code>"
+            else:
+                response_text = "⚠️ <b>Access Denied</b>\n\nYou are not authorized to use this bot."
             if chat_id:
                 try:
                     send_telegram_message(chat_id, response_text)
@@ -349,48 +373,31 @@ class handler(BaseHTTPRequestHandler):
                 if not query:
                     response_text = (
                         "⚠️ <b>Usage:</b>\n"
-                        "<code>/allow &lt;user_id&gt; [role] [username]</code>\n\n"
-                        "Example:\n"
-                        "<code>/allow 123456789 admin</code>"
+                        "<code>/allow &lt;user_id_or_username&gt; [role]</code>\n\n"
+                        "Examples:\n"
+                        "• <code>/allow @username admin</code>\n"
+                        "• <code>/allow 123456789</code>"
                     )
                 else:
                     parts = query.split()
-                    target_id_str = parts[0]
-                    try:
-                        target_id = int(target_id_str)
-                        role = "regular"
-                        target_username = None
+                    target_identifier = parts[0]
+                    role = "regular"
+                    if len(parts) >= 2:
+                        val = parts[1].lower()
+                        if val in ("admin", "regular"):
+                            role = val
 
-                        if len(parts) == 2:
-                            val = parts[1]
-                            if val.lower() in ("admin", "regular"):
-                                role = val.lower()
-                            else:
-                                target_username = val
-                        elif len(parts) >= 3:
-                            val1 = parts[1]
-                            val2 = parts[2]
-                            if val1.lower() in ("admin", "regular"):
-                                role = val1.lower()
-                                target_username = val2
-                            elif val2.lower() in ("admin", "regular"):
-                                role = val2.lower()
-                                target_username = val1
-                            else:
-                                target_username = val1
-                        
-                        if target_username:
-                            target_username = target_username.lstrip('@')
-
-                        success = allow_user(target_id, username=target_username, role=role)
+                    target_id, target_username = resolve_user_details(target_identifier)
+                    if target_id is None:
+                        response_text = f"❌ <b>Error:</b> Could not find or resolve user <code>{target_identifier}</code> in the database. Please ensure they have started the bot by sending a message or clicking /start first."
+                    else:
+                        success, err = allow_user(target_id, role=role)
                         if success:
                             response_text = f"✅ <b>User Allowed Successfully</b>\n\n• <b>User ID:</b> <code>{target_id}</code>\n• <b>Role:</b> {role}"
                             if target_username:
                                 response_text += f"\n• <b>Username:</b> @{target_username}"
                         else:
-                            response_text = f"❌ <b>Error:</b> Failed to update user <code>{target_id}</code> in database."
-                    except ValueError:
-                        response_text = "❌ <b>Error:</b> User ID must be a valid integer."
+                            response_text = f"❌ <b>Error:</b> Failed to update user <code>{target_id}</code> in database. Details: <code>{html.escape(str(err))}</code>"
                 
                 send_telegram_message(chat_id, response_text)
                 topic = f"allow_user_{query}"
@@ -398,22 +405,24 @@ class handler(BaseHTTPRequestHandler):
                 if not query:
                     response_text = (
                         "⚠️ <b>Usage:</b>\n"
-                        "<code>/revoke &lt;user_id&gt;</code>\n\n"
+                        "<code>/revoke &lt;user_id_or_username&gt;</code>\n\n"
                         "Example:\n"
-                        "<code>/revoke 123456789</code>"
+                        "<code>/revoke @username</code>"
                     )
                 else:
                     parts = query.split()
-                    target_id_str = parts[0]
-                    try:
-                        target_id = int(target_id_str)
-                        success = revoke_user(target_id)
+                    target_identifier = parts[0]
+                    target_id, target_username = resolve_user_details(target_identifier)
+                    if target_id is None:
+                        response_text = f"❌ <b>Error:</b> Could not find or resolve user <code>{target_identifier}</code> in the database."
+                    else:
+                        success, err = revoke_user(target_id)
                         if success:
                             response_text = f"🚫 <b>User Revoked</b>\n\nUser ID <code>{target_id}</code> has been deactivated. They will no longer have access to the bot."
+                            if target_username:
+                                response_text += f"\n• <b>Username:</b> @{target_username}"
                         else:
-                            response_text = f"❌ <b>Error:</b> Failed to deactivate user <code>{target_id}</code> in database."
-                    except ValueError:
-                        response_text = "❌ <b>Error:</b> User ID must be a valid integer."
+                            response_text = f"❌ <b>Error:</b> Failed to deactivate user <code>{target_id}</code> in database. Details: <code>{html.escape(str(err))}</code>"
                 
                 send_telegram_message(chat_id, response_text)
                 topic = f"revoke_user_{query}"

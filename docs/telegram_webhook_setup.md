@@ -63,16 +63,20 @@ Administrators can manage the allowed users directly from Telegram using the fol
 
 * **Allow a user / change their role**:
   ```
-  /allow <user_id> [role] [username]
+  /allow <user_id_or_username> [role]
   ```
   - `role` can be `admin` or `regular` (defaults to `regular`).
-  - Example: `/allow 123456789 admin @johndoe`
+  - Examples: 
+    - `/allow @johndoe admin`
+    - `/allow 123456789`
 
 * **Revoke a user**:
   ```
-  /revoke <user_id>
+  /revoke <user_id_or_username>
   ```
-  - Example: `/revoke 123456789`
+  - Examples:
+    - `/revoke @johndoe`
+    - `/revoke 123456789`
 
 ### Bootstrapping your Admin
-When setting up the database for the first time, you do not need to manually run SQL insert scripts unless you want to. Because of the fallback design, any user ID defined in your Vercel environment variables (`TELEGRAM_ALLOWED_USER_ID`, etc.) is recognized as an admin. This bootstrap admin can simply message the bot and use `/allow <user_id> admin` to add themselves and others permanently to the database.
+When setting up the database for the first time, you do not need to manually run SQL insert scripts unless you want to. Because of the fallback design, any user ID defined in your Vercel environment variables (`TELEGRAM_ALLOWED_USER_ID`, etc.) is recognized as an admin. This bootstrap admin can simply message the bot and use `/allow <user_id_or_username> admin` to add themselves and others permanently to the database.

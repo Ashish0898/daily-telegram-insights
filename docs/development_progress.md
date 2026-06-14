@@ -22,6 +22,8 @@ This file serves as a status tracker and resume plan for the **Daily Telegram In
    - Created [docs/talivy_setup.md](file:///mnt/c/Users/Ashish/Downloads/playground/daily-telegram-insights/docs/talivy_setup.md) for Talivy Search settings.
    - Created [docs/telegram_webhook_setup.md](file:///mnt/c/Users/Ashish/Downloads/playground/daily-telegram-insights/docs/telegram_webhook_setup.md) for webhook security.
    - Cleaned up the main [README.md](file:///mnt/c/Users/Ashish/Downloads/playground/daily-telegram-insights/README.md) to link directly to these guides.
+6. **Webhook Audit Logging Fix**:
+   - Fixed an issue where the access denied response sent to unauthorized users was logged with `NULL` for `response_content` in the `request_audit` database table. It now correctly logs the sent text message.
 
 ---
 

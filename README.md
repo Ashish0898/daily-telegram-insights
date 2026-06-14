@@ -55,6 +55,8 @@ Vercel will automatically run the scheduled endpoints defined in `vercel.json`:
 - `GET /api/fact` — send a daily fact
 - `GET /api/news` — send a daily dynamic news update
 
+For detailed local execution commands, query parameters, and testing payload formats, see the **[Bot API & Webhook Usage Guide](docs/api_usage.md)**.
+
 ---
 
 ### Available bot commands
@@ -63,8 +65,8 @@ Vercel will automatically run the scheduled endpoints defined in `vercel.json`:
 - `/news` — generate a dynamic news query via LLM and search Talivy
 - `/news <query>` — search Talivy for a specific query
 - `/search <query>` — search Talivy for a custom topic
-- `/allow <user_id> [role] [username]` — allow a user to access the bot (admin only)
-- `/revoke <user_id>` — revoke access for a user (admin only)
+- `/allow <user_id_or_username> [role]` — allow a user to access the bot (admin only)
+- `/revoke <user_id_or_username>` — revoke access for a user (admin only)
 - `/help` — show help text
 
 ---

@@ -123,15 +123,16 @@ def is_user_admin(user_id: int) -> bool:
                     allowed_ids.add(chunk)
     return str(user_id) in allowed_ids
 
-def allow_user(user_id: int, username: str = None, role: str = "regular") -> bool:
+def allow_user(user_id: int, username: str = None, role: str = "regular") -> tuple[bool, str | None]:
     """
     Inserts or updates a user in the 'allowed_users' table, setting them to active.
-    Returns True if successful, False otherwise.
+    Returns (True, None) if successful, (False, error_message) otherwise.
     """
     client = get_supabase_client()
     if not client:
-        logger.error("Supabase client is not available. Cannot allow user.")
-        return False
+        err_msg = "Supabase client is not available. Cannot allow user."
+        logger.error(err_msg)
+        return False, err_msg
 
     payload = {
         "user_id": user_id,
@@ -144,25 +145,114 @@ def allow_user(user_id: int, username: str = None, role: str = "regular") -> boo
 
     try:
         client.table("allowed_users").upsert(payload).execute()
-        return True
+        return True, None
     except Exception as e:
-        logger.error(f"Failed to upsert allowed user: {e}")
-        return False
+        logger.exception(f"Failed to upsert allowed user {user_id}")
+        return False, str(e)
 
-def revoke_user(user_id: int) -> bool:
+def revoke_user(user_id: int) -> tuple[bool, str | None]:
     """
     Deactivates a user in the 'allowed_users' table (setting is_active to False).
-    Returns True if successful, False otherwise.
+    Returns (True, None) if successful, (False, error_message) otherwise.
     """
     client = get_supabase_client()
     if not client:
-        logger.error("Supabase client is not available. Cannot revoke user.")
-        return False
+        err_msg = "Supabase client is not available. Cannot revoke user."
+        logger.error(err_msg)
+        return False, err_msg
 
     try:
         client.table("allowed_users").update({"is_active": False}).eq("user_id", user_id).execute()
+        return True, None
+    except Exception as e:
+        logger.exception(f"Failed to update user active status to False for user {user_id}")
+        return False, str(e)
+
+
+def register_inactive_user_if_new(user_id: int, username: str = None) -> bool:
+    """
+    Checks if a Telegram user ID is present in the 'allowed_users' table.
+    If not present, inserts the user with is_active = False, role = 'regular'.
+    Returns True if a new user was registered, False otherwise.
+    """
+    client = get_supabase_client()
+    if not client:
+        logger.error("Supabase client is not available. Cannot register inactive user.")
+        return False
+
+    try:
+        response = client.table("allowed_users").select("user_id").eq("user_id", user_id).execute()
+        if response.data is not None and len(response.data) > 0:
+            logger.info(f"User {user_id} already exists in database. No need to register.")
+            return False
+
+        payload = {
+            "user_id": user_id,
+            "is_active": False,
+            "role": "regular"
+        }
+        if username is not None:
+            payload["username"] = username
+
+        client.table("allowed_users").insert(payload).execute()
+        logger.info(f"Registered new inactive user: {user_id} (username: {username})")
         return True
     except Exception as e:
-        logger.error(f"Failed to update user active status to False: {e}")
+        logger.exception(f"Failed to register inactive user {user_id}")
         return False
+
+
+def resolve_user_details(identifier: str) -> tuple[int | None, str | None]:
+    """
+    Resolves a string identifier to a numeric Telegram User ID and their username.
+    The identifier can be a numeric string or a Telegram username (with or without '@').
+    Queries the database if needed.
+    Returns (user_id, username) or (None, None) if not found.
+    """
+    if not identifier:
+        return None, None
+
+    identifier = identifier.strip()
+
+    client = get_supabase_client()
+    if not client:
+        logger.error("Supabase client is not available. Cannot resolve user details.")
+        return None, None
+
+    # Check if it's already a numeric ID
+    try:
+        user_id = int(identifier)
+        # Fetch the username from database for this user_id if they exist
+        try:
+            response = client.table("allowed_users").select("username").eq("user_id", user_id).execute()
+            if response.data and len(response.data) > 0:
+                return user_id, response.data[0].get("username")
+        except Exception:
+            pass
+        return user_id, None
+    except ValueError:
+        pass
+
+    # Clean username prefix if any
+    username = identifier.lstrip('@')
+
+    try:
+        # Query database case-insensitively or exactly
+        response = client.table("allowed_users").select("user_id, username").eq("username", username).execute()
+        if response.data and len(response.data) > 0:
+            row = response.data[0]
+            return row.get("user_id"), row.get("username")
+
+        response = client.table("allowed_users").select("user_id, username").ilike("username", username).execute()
+        if response.data and len(response.data) > 0:
+            row = response.data[0]
+            return row.get("user_id"), row.get("username")
+
+        logger.info(f"Username '{username}' not found in database.")
+        return None, None
+    except Exception as e:
+        logger.exception(f"Failed to resolve username '{username}' to user ID and username")
+        return None, None
+
+
 
