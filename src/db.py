@@ -255,4 +255,23 @@ def resolve_user_details(identifier: str) -> tuple[int | None, str | None]:
         return None, None
 
 
+def get_all_users() -> list[dict] | None:
+    """
+    Retrieves all users from the 'allowed_users' table in Supabase.
+    Returns a list of dicts, or None if the operation fails.
+    """
+    client = get_supabase_client()
+    if not client:
+        logger.error("Supabase client is not available. Cannot fetch all users.")
+        return None
+
+    try:
+        response = client.table("allowed_users").select("*").order("created_at").execute()
+        return response.data
+    except Exception as e:
+        logger.exception("Failed to fetch all users from database")
+        return None
+
+
+
 

@@ -209,3 +209,25 @@ Triggers the Talivy news gathering flow.
 | `query` | The topic search query for Talivy | Dynamic LLM generated topic / `NEWS_QUERY` env var |
 | `limit` | Max number of news items to fetch/send | `5` |
 | `summary` | Boolean (`true`/`false`) to format as a single condensed text summary | `false` |
+
+---
+
+## 4. Users List Endpoint (`GET /api/users`)
+
+This endpoint lists all users recorded in the database, along with their roles and active statuses. To prevent unauthorized access, it requires a valid administrator's Telegram User ID.
+
+### Query Parameters
+| Query Parameter | Description | Default Value |
+| :--- | :--- | :--- |
+| `admin_id` | The Telegram User ID of an active admin | *(Required)* |
+| `format` | Output format: `json` or `html` | `json` |
+
+### A. Fetch Users list as JSON
+```bash
+curl -X GET "http://localhost:3000/api/users?admin_id=123456789"
+```
+
+### B. Fetch Users list as a Pretty HTML Table
+```bash
+curl -X GET "http://localhost:3000/api/users?admin_id=123456789&format=html"
+```

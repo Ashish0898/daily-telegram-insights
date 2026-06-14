@@ -40,7 +40,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 's
 from src.generate_fact import generate_fact, generate_dynamic_news_query
 from src.send_news import execute_and_send_news
 from src.talivy_search import talivy_search, format_search_results, parse_talivy_results, clean_text_for_telegram
-from src.db import log_request, is_user_allowed, is_user_admin, allow_user, revoke_user, register_inactive_user_if_new, resolve_user_details
+from src.db import log_request, is_user_allowed, is_user_admin, allow_user, revoke_user, register_inactive_user_if_new, resolve_user_details, get_all_users
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
@@ -87,6 +87,9 @@ def parse_command(text: str) -> dict:
             "query": query or None,
         }
 
+    if normalized.startswith("/users"):
+        return {"type": "users", "query": None}
+
     return {"type": "fact", "query": None}
 
 
@@ -102,7 +105,8 @@ def build_help_message(is_admin: bool = False) -> str:
         msg += (
             "\n\n🛡️ <b>Admin Commands:</b>\n"
             "Use /allow &lt;user_id_or_username&gt; [role] to allow a user (role defaults to 'regular').\n"
-            "Use /revoke &lt;user_id_or_username&gt; to revoke access for a user."
+            "Use /revoke &lt;user_id_or_username&gt; to revoke access for a user.\n"
+            "Use /users to list all users and their roles."
         )
     return msg
 
@@ -180,13 +184,16 @@ class handler(BaseHTTPRequestHandler):
                 "endpoints": {
                     "webhook": "/api/telegram",
                     "fact_scheduler": "/api/fact",
-                    "news_scheduler": "/api/news"
+                    "news_scheduler": "/api/news",
+                    "users_list": "/api/users"
                 }
             })
         elif path == '/api/fact':
             self.handle_fact_get()
         elif path == '/api/news':
             self.handle_news_get(parsed_url.query)
+        elif path == '/api/users':
+            self.handle_users_get(parsed_url.query)
         else:
             self.send_json(404, {"error": f"Path {self.path} not found"})
 
@@ -348,7 +355,7 @@ class handler(BaseHTTPRequestHandler):
 
             is_admin = is_user_admin(from_id) if from_id is not None else False
 
-            if cmd_type in ("allow", "revoke") and not is_admin:
+            if cmd_type in ("allow", "revoke", "users") and not is_admin:
                 logger.warning(f"Unauthorized admin command attempt from user ID {from_id}")
                 response_text = "⚠️ <b>Access Denied</b>\n\nYou must be an admin to perform this action."
                 send_telegram_message(chat_id, response_text)
@@ -426,6 +433,32 @@ class handler(BaseHTTPRequestHandler):
                 
                 send_telegram_message(chat_id, response_text)
                 topic = f"revoke_user_{query}"
+            elif cmd_type == "users":
+                users = get_all_users()
+                if users is None:
+                    response_text = "❌ <b>Error:</b> Failed to retrieve users from database."
+                elif len(users) == 0:
+                    response_text = "ℹ️ <b>No users found in database.</b>"
+                else:
+                    response_text = "📋 <b>Registered Users List</b>\n\n"
+                    for u in users:
+                        uid = u.get("user_id", "")
+                        uname = u.get("username", "") or ""
+                        uname_display = f"@{uname}" if uname else "<i>N/A</i>"
+                        role = u.get("role", "regular")
+                        active_status = "🟢 Active" if u.get("is_active") else "🔴 Inactive"
+                        role_emoji = "🛡️ admin" if role == "admin" else "👤 regular"
+                        
+                        response_text += (
+                            f"• <b>User:</b> {uname_display}\n"
+                            f"  ├ <b>ID:</b> <code>{uid}</code>\n"
+                            f"  ├ <b>Role:</b> {role_emoji}\n"
+                            f"  └ <b>Status:</b> {active_status}\n\n"
+                        )
+                    response_text = response_text.rstrip()
+                
+                send_telegram_message(chat_id, response_text)
+                topic = "list_users"
             else:
                 response_text, topic = get_response_text(cmd, is_admin=is_admin)
                 send_telegram_message(chat_id, response_text)
@@ -555,6 +588,212 @@ class handler(BaseHTTPRequestHandler):
                 error_message=str(e),
                 execution_time_ms=int((time.time() - start_time) * 1000)
             )
+
+    def handle_users_get(self, query_string: str):
+        start_time = time.time()
+        logger.info("Incoming GET request for users list")
+
+        query_params = parse_qs(query_string)
+        admin_id_str = query_params.get("admin_id", [None])[0]
+
+        if not admin_id_str:
+            self.send_json(401, {"error": "Missing admin_id query parameter"})
+            return
+
+        try:
+            admin_id = int(admin_id_str)
+        except ValueError:
+            self.send_json(400, {"error": "admin_id must be a valid integer"})
+            return
+
+        if not is_user_admin(admin_id):
+            self.send_json(403, {"error": "Access Denied: You must be an admin to view this resource"})
+            return
+
+        users = get_all_users()
+        if users is None:
+            self.send_json(500, {"error": "Failed to retrieve users from database"})
+            return
+
+        format_type = query_params.get("format", ["json"])[0]
+        if format_type == "html":
+            html_content = self.generate_users_html_table(users)
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html")
+            self.send_header("Content-Length", str(len(html_content)))
+            self.send_header("Connection", "close")
+            self.end_headers()
+            self.wfile.write(html_content.encode("utf-8"))
+        else:
+            self.send_json(200, {"users": users})
+
+    def generate_users_html_table(self, users: list[dict]) -> str:
+        rows_html = ""
+        for u in users:
+            uid = u.get("user_id", "")
+            uname = u.get("username", "") or ""
+            uname_display = f"@{uname}" if uname else "<i>N/A</i>"
+            role = u.get("role", "regular")
+            active = u.get("is_active", True)
+            
+            role_badge = f'<span class="badge badge-{role}">{role}</span>'
+            status_badge = '<span class="badge badge-active">Active</span>' if active else '<span class="badge badge-inactive">Inactive</span>'
+            
+            rows_html += f"""
+            <tr>
+                <td><code>{uid}</code></td>
+                <td>{uname_display}</td>
+                <td>{role_badge}</td>
+                <td>{status_badge}</td>
+                <td>{u.get("created_at", "")[:19].replace("T", " ")}</td>
+            </tr>
+            """
+            
+        html_page = f"""<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Registered Users List</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #0f172a;
+            color: #e2e8f0;
+            padding: 40px 20px;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+        }}
+        .container {{
+            width: 100%;
+            max-width: 900px;
+            background-color: #1e293b;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            padding: 30px;
+            border: 1px solid #334155;
+            box-sizing: border-box;
+        }}
+        h1 {{
+            margin-top: 0;
+            font-size: 24px;
+            color: #f8fafc;
+            border-bottom: 2px solid #334155;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }}
+        .table-responsive {{
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }}
+        table {{
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            min-width: 600px;
+        }}
+        th, td {{
+            padding: 12px 16px;
+            border-bottom: 1px solid #334155;
+        }}
+        th {{
+            background-color: #0f172a;
+            color: #94a3b8;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 12px;
+            letter-spacing: 0.05em;
+        }}
+        tr:hover {{
+            background-color: #334155;
+        }}
+        code {{
+            background-color: #0f172a;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #38bdf8;
+            font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+        }}
+        .badge {{
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 9999px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }}
+        .badge-admin {{
+            background-color: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.4);
+        }}
+        .badge-regular {{
+            background-color: rgba(59, 130, 246, 0.2);
+            color: #3b82f6;
+            border: 1px solid rgba(59, 130, 246, 0.4);
+        }}
+        .badge-active {{
+            background-color: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, 0.4);
+        }}
+        .badge-inactive {{
+            background-color: rgba(107, 114, 128, 0.2);
+            color: #9ca3af;
+            border: 1px solid rgba(107, 114, 128, 0.4);
+        }}
+        @media (max-width: 640px) {{
+            body {{
+                padding: 10px 5px;
+            }}
+            .container {{
+                padding: 15px 10px;
+                border-radius: 8px;
+            }}
+            h1 {{
+                font-size: 18px;
+                margin-bottom: 15px;
+            }}
+            th, td {{
+                padding: 10px 8px;
+                font-size: 12px;
+            }}
+            .badge {{
+                padding: 2px 6px;
+                font-size: 9px;
+            }}
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🛡️ Registered Users Control List</h1>
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th>User ID</th>
+                        <th>Username</th>
+                        <th>Role</th>
+                        <th>Status</th>
+                        <th>Registered At</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {rows_html}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</body>
+</html>
+"""
+        return html_page
 
 if __name__ == '__main__':
     from http.server import HTTPServer
