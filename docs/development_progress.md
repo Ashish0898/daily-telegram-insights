@@ -24,6 +24,26 @@ This file serves as a status tracker and resume plan for the **Daily Telegram In
    - Cleaned up the main [README.md](file:///mnt/c/Users/Ashish/Downloads/playground/daily-telegram-insights/README.md) to link directly to these guides.
 6. **Webhook Audit Logging Fix**:
    - Fixed an issue where the access denied response sent to unauthorized users was logged with `NULL` for `response_content` in the `request_audit` database table. It now correctly logs the sent text message.
+7. **Username-Based Access Management**:
+   - Enhanced user management commands `/allow` and `/revoke` to accept either numeric Telegram User IDs or usernames (with or without `@`).
+   - Added case-insensitive username resolution helper `resolve_user_details` in [src/db.py](file:///mnt/c/Users/Ashish/Downloads/playground/daily-telegram-insights/src/db.py).
+8. **Auto Inactive User Registration**:
+   - Implemented `register_inactive_user_if_new` to register new unauthorized users who interact with the bot (e.g. via `/start`) as inactive (`is_active = False`), enabling admins to dynamically approve them.
+9. **Admin `/users` Command & API Endpoint**:
+   - Added a `/users` Telegram command for administrators to list all registered users.
+   - Built a secure `GET /api/users` REST endpoint that lists registered users in `json` or pretty `html` formats, authorized via the requesting `admin_id`.
+10. **Unified Local Testing Guide**:
+    - Created [docs/api_usage.md](file:///mnt/c/Users/Ashish/Downloads/playground/daily-telegram-insights/docs/api_usage.md) detailing local server startup and `curl` testing commands for simulate commands, schedulers, and user endpoints.
+11. **Static Premium Landing Page**:
+    - Created a beautiful, responsive, glassmorphism-themed [index.html](file:///mnt/c/Users/Ashish/Downloads/playground/daily-telegram-insights/index.html) at the project root serving as the public landing page.
+    - Features a live interactive Telegram chat simulator for commands (`/fact`, `/news`, `/whoami`, `/help`).
+    - Updated [vercel.json](file:///mnt/c/Users/Ashish/Downloads/playground/daily-telegram-insights/vercel.json) rewrites to serve `index.html` at the root path `/` and cleanly forward all API requests under `/api/*` to [api/index.py](file:///mnt/c/Users/Ashish/Downloads/playground/daily-telegram-insights/api/index.py).
+12. **Auth0 Authentication & Administrative Dashboard**:
+    - Integrated standard **Auth0 Universal Login** flow (Authorization Code Flow) with routes `/api/auth/login`, `/api/auth/callback`, and `/api/auth/logout` in [api/index.py](file:///mnt/c/Users/Ashish/Downloads/playground/daily-telegram-insights/api/index.py).
+    - Designed and implemented a secure session cookie mechanism using custom HMAC-SHA256 signatures, avoiding any external library dependencies.
+    - Built a premium dark-theme admin dashboard **[admin.html](file:///mnt/c/Users/Ashish/Downloads/playground/daily-telegram-insights/admin.html)** displaying a database-driven table of registered users.
+    - Created admin action API endpoints `POST /api/users/allow` and `POST /api/users/revoke` in [api/index.py](file:///mnt/c/Users/Ashish/Downloads/playground/daily-telegram-insights/api/index.py) to activate/deactivate user access dynamically directly from the dashboard.
+    - Configured admin access validation using both environment-level allowlists (`ADMIN_EMAILS` check) and database role-checks (`is_user_admin` lookup).
 
 ---
 
@@ -40,3 +60,8 @@ When you resume tomorrow, choose one of these next features to implement:
 
 ### Option C: Fact History & Deduplication
 * Log every generated fact to check against future generations, ensuring the LLM never sends a duplicate fact.
+
+### Option D: Telegram-Controlled Cron Scheduler Toggle (Vercel + DB Toggle)
+* Create a `bot_settings` table in Supabase to track setting states like `fact_cron_enabled` and `news_cron_enabled`.
+* Update the cron handlers (`/api/fact` and `/api/news`) to check the database setting before execution and exit early if disabled to save API quotas.
+* Implement an admin-only Telegram command `/cron <fact|news> <on|off>` and `/cron status` to dynamically view and toggle schedule enablement states directly from Telegram.

@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard — Daily Telegram Insights</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --primary: #8b5cf6;
+      --primary-rgb: 139, 92, 246;
+      --secondary: #06b6d4;
+      --secondary-rgb: 6, 182, 212;
+      --success: #10b981;
+      --danger: #ef4444;
+      --bg-dark: #030712;
+      --bg-card: rgba(17, 24, 39, 0.7);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --transition: all 0.25s ease;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Outfit', sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* Grid/Glow background */
+    .bg-grid {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: 
+        linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
+      background-size: 60px 60px;
+      z-index: -1;
+      pointer-events: none;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+      width: 100%;
+      flex: 1;
+    }
+
+    /* Header Nav */
+    header {
+      background: rgba(17, 24, 39, 0.6);
+      border-bottom: 1px solid var(--border-color);
+      backdrop-filter: blur(12px);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      font-size: 1.25rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      text-decoration: none;
+      color: var(--text-main);
+    }
+
+    .logo span {
+      color: var(--primary);
+    }
+
+    .profile-section {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .profile-info {
+      text-align: right;
+    }
+
+    .profile-name {
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .profile-role {
+      font-size: 0.75rem;
+      color: var(--secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 700;
+    }
+
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 2px solid var(--primary);
+      background-color: rgba(255, 255, 255, 0.05);
+    }
+
+    .btn-logout {
+      background: transparent;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      color: var(--danger);
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .btn-logout:hover {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: var(--danger);
+    }
+
+    /* Main Dashboard Grid */
+    .dashboard-title {
+      margin-bottom: 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .dashboard-title h1 {
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      padding: 2rem;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+    }
+
+    .card-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    /* Form popup/controls for allowing users */
+    .allow-user-box {
+      display: flex;
+      gap: 1rem;
+      margin-bottom: 2rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid var(--border-color);
+      flex-wrap: wrap;
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      flex: 1;
+      min-width: 180px;
+    }
+
+    .input-group label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .input-group input, .input-group select {
+      background: rgba(0, 0, 0, 0.2);
+      border: 1px solid var(--border-color);
+      padding: 0.7rem 1rem;
+      border-radius: 8px;
+      color: var(--text-main);
+      outline: none;
+      font-size: 0.9rem;
+      font-family: inherit;
+      transition: var(--transition);
+    }
+
+    .input-group input:focus, .input-group select:focus {
+      border-color: var(--primary);
+    }
+
+    .btn-submit {
+      background: var(--primary);
+      border: none;
+      color: white;
+      padding: 0.7rem 1.5rem;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      align-self: flex-end;
+      font-size: 0.9rem;
+      transition: var(--transition);
+      height: 42px;
+    }
+
+    .btn-submit:hover {
+      background: #7c3aed;
+      transform: translateY(-1px);
+    }
+
+    /* Users Table */
+    .table-container {
+      overflow-x: auto;
+      margin-top: 1rem;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.9rem;
+    }
+
+    th, td {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    th {
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    .user-id-code {
+      font-family: 'JetBrains Mono', monospace;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 0.2rem 0.5rem;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.03);
+      font-size: 0.85rem;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 0.25rem 0.65rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.02em;
+    }
+
+    .badge-active {
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--success);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+
+    .badge-inactive {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--danger);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+    }
+
+    .badge-admin {
+      background: rgba(139, 92, 246, 0.15);
+      color: #a78bfa;
+      border: 1px solid rgba(139, 92, 246, 0.25);
+    }
+
+    .badge-regular {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-muted);
+      border: 1px solid var(--border-color);
+    }
+
+    /* Actions buttons */
+    .btn-action {
+      background: transparent;
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .btn-allow {
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: var(--success);
+    }
+
+    .btn-allow:hover {
+      background: rgba(16, 185, 129, 0.1);
+    }
+
+    .btn-revoke {
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      color: var(--danger);
+    }
+
+    .btn-revoke:hover {
+      background: rgba(239, 68, 68, 0.1);
+    }
+
+    /* Loader */
+    .spinner {
+      border: 3px solid rgba(255, 255, 255, 0.05);
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border-left-color: var(--primary);
+      animation: spin 1s linear infinite;
+      margin: 2rem auto;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Alerts */
+    .alert-banner {
+      padding: 0.8rem 1.2rem;
+      border-radius: 10px;
+      margin-bottom: 1.5rem;
+      font-size: 0.9rem;
+      display: none;
+    }
+    .alert-success {
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.2);
+      color: var(--success);
+    }
+    .alert-error {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      color: var(--danger);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="bg-grid"></div>
+
+  <!-- Header -->
+  <header>
+    <a href="/" class="logo">🤖 Daily Insights <span>Admin</span></a>
+    
+    <div class="profile-section">
+      <div class="profile-info">
+        <div class="profile-name" id="admin-name">Administrator</div>
+        <div class="profile-role" id="admin-role">Admin Access</div>
+      </div>
+      <img src="" id="admin-avatar" class="avatar" alt="Avatar" style="display:none;">
+      <button class="btn-logout" onclick="location.href='/api/auth/logout'">Logout</button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="container">
+    <div class="dashboard-title">
+      <h1>User Access Management</h1>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span>Manage Allowed Users</span>
+      </div>
+
+      <div class="alert-banner" id="banner"></div>
+
+      <!-- Allow User Inputs -->
+      <div class="allow-user-box">
+        <div class="input-group">
+          <label for="new-userid">Telegram User ID</label>
+          <input type="number" id="new-userid" placeholder="e.g. 123456789">
+        </div>
+        <div class="input-group">
+          <label for="new-username">Username (Optional)</label>
+          <input type="text" id="new-username" placeholder="e.g. johndoe">
+        </div>
+        <div class="input-group" style="max-width: 150px;">
+          <label for="new-role">Role</label>
+          <select id="new-role">
+            <option value="regular">Regular</option>
+            <option value="admin">Admin</option>
+          </select>
+        </div>
+        <button class="btn-submit" onclick="submitAllowUser()">Grant Access</button>
+      </div>
+
+      <!-- Users List -->
+      <div class="table-container">
+        <div class="spinner" id="table-loader"></div>
+        <table id="users-table" style="display: none;">
+          <thead>
+            <tr>
+              <th>Telegram User ID</th>
+              <th>Username</th>
+              <th>Role</th>
+              <th>Status</th>
+              <th>Added On</th>
+              <th style="text-align: right;">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="users-tbody">
+            <!-- Rendered Dynamically -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // Fetch and populate profile info from Auth0 session
+    // Since Auth0 details are stored in the secure session cookie, we can fetch them via a user profile API or decode if needed.
+    // For simplicity, we can load user data dynamically if we expose a /api/auth/me endpoint, or let the backend embed it.
+    // Let's call /api/users to test connection, and fetch admin name from page headers or cookie session values.
+    
+    async function loadUsers() {
+      const table = document.getElementById('users-table');
+      const tbody = document.getElementById('users-tbody');
+      const loader = document.getElementById('table-loader');
+      
+      loader.style.display = 'block';
+      table.style.display = 'none';
+      tbody.innerHTML = '';
+
+      try {
+        const response = await fetch('/api/users');
+        if (!response.ok) {
+          throw new Error('Failed to load users from database.');
+        }
+        
+        const data = await response.json();
+        const users = data.users || [];
+        
+        users.forEach(user => {
+          const tr = document.createElement('tr');
+          
+          const roleBadge = user.role === 'admin' 
+            ? `<span class="badge badge-admin">Admin</span>` 
+            : `<span class="badge badge-regular">Regular</span>`;
+            
+          const statusBadge = user.is_active 
+            ? `<span class="badge badge-active">Active</span>` 
+            : `<span class="badge badge-inactive">Inactive</span>`;
+            
+          const actionBtn = user.is_active
+            ? `<button class="btn-action btn-revoke" onclick="revokeUser(${user.user_id})">Deactivate</button>`
+            : `<button class="btn-action btn-allow" onclick="allowUser(${user.user_id}, '${user.username || ''}', '${user.role || 'regular'}')">Activate</button>`;
+          
+          // Format date
+          let dateStr = 'N/A';
+          if (user.created_at) {
+            const date = new Date(user.created_at);
+            dateStr = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+          }
+
+          tr.innerHTML = `
+            <td><span class="user-id-code">${user.user_id}</span></td>
+            <td>${user.username ? '@' + user.username : '<i>None</i>'}</td>
+            <td>${roleBadge}</td>
+            <td>${statusBadge}</td>
+            <td>${dateStr}</td>
+            <td style="text-align: right;">${actionBtn}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        loader.style.display = 'none';
+        table.style.display = 'table';
+      } catch (err) {
+        loader.style.display = 'none';
+        showAlert(err.message, 'error');
+      }
+    }
+
+    function showAlert(msg, type) {
+      const banner = document.getElementById('banner');
+      banner.textContent = msg;
+      banner.className = `alert-banner alert-${type}`;
+      banner.style.display = 'block';
+      setTimeout(() => {
+        banner.style.display = 'none';
+      }, 5000);
+    }
+
+    async function allowUser(userId, username, role) {
+      try {
+        const response = await fetch('/api/users/allow', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: userId, username: username || null, role: role })
+        });
+        const data = await response.json();
+        if (response.ok && data.ok) {
+          showAlert('User access successfully updated!', 'success');
+          loadUsers();
+        } else {
+          throw new Error(data.error || 'Failed to update user access.');
+        }
+      } catch (err) {
+        showAlert(err.message, 'error');
+      }
+    }
+
+    async function revokeUser(userId) {
+      try {
+        const response = await fetch('/api/users/revoke', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: userId })
+        });
+        const data = await response.json();
+        if (response.ok && data.ok) {
+          showAlert('User access deactivated successfully.', 'success');
+          loadUsers();
+        } else {
+          throw new Error(data.error || 'Failed to deactivate user.');
+        }
+      } catch (err) {
+        showAlert(err.message, 'error');
+      }
+    }
+
+    async function submitAllowUser() {
+      const userIdInput = document.getElementById('new-userid');
+      const usernameInput = document.getElementById('new-username');
+      const roleInput = document.getElementById('new-role');
+      
+      const userId = parseInt(userIdInput.value);
+      const username = usernameInput.value.trim().replace(/^@/, '');
+      const role = roleInput.value;
+
+      if (isNaN(userId)) {
+        showAlert('Please enter a valid numeric Telegram User ID.', 'error');
+        return;
+      }
+
+      await allowUser(userId, username || null, role);
+      userIdInput.value = '';
+      usernameInput.value = '';
+    }
+
+    // Attempt to load profile name from URL params or a session request if possible.
+    // For now, load user list on load
+    window.addEventListener('DOMContentLoaded', loadUsers);
+  </script>
+</body>
+</html>

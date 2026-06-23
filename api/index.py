@@ -42,9 +42,70 @@ from src.send_news import execute_and_send_news
 from src.talivy_search import talivy_search, format_search_results, parse_talivy_results, clean_text_for_telegram
 from src.db import log_request, is_user_allowed, is_user_admin, allow_user, revoke_user, register_inactive_user_if_new, resolve_user_details, get_all_users
 
+import hmac
+import hashlib
+import base64
+from http.cookies import SimpleCookie
+
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 TELEGRAM_API = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+
+def sign_session_data(data_str: str, secret: str) -> str:
+    signature = hmac.new(secret.encode('utf-8'), data_str.encode('utf-8'), hashlib.sha256).hexdigest()
+    return f"{data_str}.{signature}"
+
+def verify_session_data(signed_str: str, secret: str) -> str | None:
+    if not signed_str or '.' not in signed_str:
+        return None
+    try:
+        data_str, signature = signed_str.rsplit('.', 1)
+        expected_sig = hmac.new(secret.encode('utf-8'), data_str.encode('utf-8'), hashlib.sha256).hexdigest()
+        if hmac.compare_digest(signature, expected_sig):
+            return data_str
+    except Exception:
+        pass
+    return None
+
+def get_session_user(headers, secret: str) -> dict | None:
+    cookie_header = headers.get('Cookie')
+    if not cookie_header:
+        return None
+    cookie = SimpleCookie()
+    cookie.load(cookie_header)
+    if 'session' not in cookie:
+        return None
+    session_value = cookie['session'].value
+    verified_data = verify_session_data(session_value, secret)
+    if not verified_data:
+        return None
+    try:
+        return json.loads(base64.b64decode(verified_data).decode('utf-8'))
+    except Exception:
+        return None
+
+def is_auth0_user_admin(user_info: dict) -> bool:
+    if not user_info:
+        return False
+    
+    # 1. Check environment variable list of admin emails
+    admin_emails_env = os.getenv("ADMIN_EMAILS")
+    user_email = user_info.get("email")
+    if user_email and admin_emails_env:
+        admin_emails = [e.strip().lower() for e in admin_emails_env.split(',') if e.strip()]
+        if user_email.lower() in admin_emails:
+            return True
+            
+    # 2. Check if their nickname matches an admin in the database
+    nickname = user_info.get("nickname")
+    if nickname:
+        from src.db import resolve_user_details, is_user_admin
+        user_id, resolved_username = resolve_user_details(nickname)
+        if user_id and is_user_admin(user_id):
+            return True
+            
+    return False
+
 
 def parse_command(text: str) -> dict:
     if not text:
@@ -170,12 +231,60 @@ class handler(BaseHTTPRequestHandler):
 
         if path in ('/api/telegram', '/api/index', '/api', ''):
             self.handle_telegram_post()
+        elif path == '/api/users/allow':
+            self.handle_api_allow_user()
+        elif path == '/api/users/revoke':
+            self.handle_api_revoke_user()
         else:
             self.send_json(404, {"error": f"Path {self.path} not found"})
 
     def do_GET(self):
         parsed_url = urlparse(self.path)
         path = parsed_url.path.rstrip('/')
+
+        if path == '':
+            root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+            index_html_path = os.path.join(root_dir, 'index.html')
+            if os.path.exists(index_html_path):
+                try:
+                    with open(index_html_path, 'r', encoding='utf-8') as f:
+                        html_content = f.read()
+                    self.send_response(200)
+                    self.send_header('Content-Type', 'text/html')
+                    self.send_header('Content-Length', str(len(html_content.encode('utf-8'))))
+                    self.send_header('Connection', 'close')
+                    self.end_headers()
+                    self.wfile.write(html_content.encode('utf-8'))
+                    return
+                except Exception as e:
+                    logger.error(f"Failed to read index.html: {e}")
+
+        if path == '/admin.html':
+            auth0_secret = os.getenv("AUTH0_SECRET") or "fallback-default-secret-key-123"
+            session_user = get_session_user(self.headers, auth0_secret)
+            if not session_user or not is_auth0_user_admin(session_user):
+                # Redirect to login
+                self.send_response(302)
+                self.send_header('Location', '/api/auth/login')
+                self.send_header('Connection', 'close')
+                self.end_headers()
+                return
+
+            root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+            admin_html_path = os.path.join(root_dir, 'admin.html')
+            if os.path.exists(admin_html_path):
+                try:
+                    with open(admin_html_path, 'r', encoding='utf-8') as f:
+                        html_content = f.read()
+                    self.send_response(200)
+                    self.send_header('Content-Type', 'text/html')
+                    self.send_header('Content-Length', str(len(html_content.encode('utf-8'))))
+                    self.send_header('Connection', 'close')
+                    self.end_headers()
+                    self.wfile.write(html_content.encode('utf-8'))
+                    return
+                except Exception as e:
+                    logger.error(f"Failed to read admin.html: {e}")
 
         if path in ('', '/api', '/api/index'):
             self.send_json(200, {
@@ -188,6 +297,12 @@ class handler(BaseHTTPRequestHandler):
                     "users_list": "/api/users"
                 }
             })
+        elif path == '/api/auth/login':
+            self.handle_login()
+        elif path == '/api/auth/callback':
+            self.handle_callback()
+        elif path == '/api/auth/logout':
+            self.handle_logout()
         elif path == '/api/fact':
             self.handle_fact_get()
         elif path == '/api/news':
@@ -593,21 +708,27 @@ class handler(BaseHTTPRequestHandler):
         start_time = time.time()
         logger.info("Incoming GET request for users list")
 
-        query_params = parse_qs(query_string)
-        admin_id_str = query_params.get("admin_id", [None])[0]
+        auth0_secret = os.getenv("AUTH0_SECRET") or "fallback-default-secret-key-123"
+        session_user = get_session_user(self.headers, auth0_secret)
+        is_admin = is_auth0_user_admin(session_user)
 
-        if not admin_id_str:
-            self.send_json(401, {"error": "Missing admin_id query parameter"})
-            return
+        if not is_admin:
+            query_params = parse_qs(query_string)
+            admin_id_str = query_params.get("admin_id", [None])[0]
 
-        try:
-            admin_id = int(admin_id_str)
-        except ValueError:
-            self.send_json(400, {"error": "admin_id must be a valid integer"})
-            return
+            if admin_id_str:
+                try:
+                    admin_id = int(admin_id_str)
+                    is_admin = is_user_admin(admin_id)
+                except ValueError:
+                    self.send_json(400, {"error": "admin_id must be a valid integer"})
+                    return
+            else:
+                self.send_json(401, {"error": "Authentication required. Active session or valid admin_id required."})
+                return
 
-        if not is_user_admin(admin_id):
-            self.send_json(403, {"error": "Access Denied: You must be an admin to view this resource"})
+        if not is_admin:
+            self.send_json(403, {"error": "Access Denied: Administrator privileges required"})
             return
 
         users = get_all_users()
@@ -794,6 +915,169 @@ class handler(BaseHTTPRequestHandler):
 </html>
 """
         return html_page
+
+    def send_error_page(self, status_code: int, message: str):
+        html_err = f"""<!DOCTYPE html>
+<html>
+<head>
+  <title>Error {status_code}</title>
+  <style>
+    body {{ font-family: sans-serif; background: #030712; color: #f3f4f6; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }}
+    .card {{ background: #111827; padding: 2rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); text-align: center; max-width: 400px; }}
+    h1 {{ color: #ef4444; margin-top: 0; }}
+    a {{ color: #3b82f6; text-decoration: none; font-weight: bold; }}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Authentication Error</h1>
+    <p>{html.escape(message)}</p>
+    <p><a href="/">Return to Home</a></p>
+  </div>
+</body>
+</html>"""
+        self.send_response(status_code)
+        self.send_header('Content-Type', 'text/html')
+        self.send_header('Content-Length', str(len(html_err.encode('utf-8'))))
+        self.send_header('Connection', 'close')
+        self.end_headers()
+        self.wfile.write(html_err.encode('utf-8'))
+
+    def handle_login(self):
+        auth0_domain = os.getenv("AUTH0_DOMAIN")
+        client_id = os.getenv("AUTH0_CLIENT_ID")
+        
+        host = self.headers.get('Host')
+        protocol = 'https' if self.headers.get('X-Forwarded-Proto') == 'https' else 'http'
+        redirect_uri = f"{protocol}://{host}/api/auth/callback"
+        
+        auth_url = (
+            f"https://{auth0_domain}/authorize?"
+            f"response_type=code&"
+            f"client_id={client_id}&"
+            f"redirect_uri={redirect_uri}&"
+            f"scope=openid%20profile%20email"
+        )
+        self.send_response(302)
+        self.send_header('Location', auth_url)
+        self.send_header('Connection', 'close')
+        self.end_headers()
+
+    def handle_callback(self):
+        parsed_url = urlparse(self.path)
+        params = parse_qs(parsed_url.query)
+        code_list = params.get('code')
+        if not code_list:
+            self.send_error_page(400, "Missing authorization code from Auth0.")
+            return
+        
+        code = code_list[0]
+        auth0_domain = os.getenv("AUTH0_DOMAIN")
+        client_id = os.getenv("AUTH0_CLIENT_ID")
+        client_secret = os.getenv("AUTH0_CLIENT_SECRET")
+        auth0_secret = os.getenv("AUTH0_SECRET") or "fallback-default-secret-key-123"
+        
+        host = self.headers.get('Host')
+        protocol = 'https' if self.headers.get('X-Forwarded-Proto') == 'https' else 'http'
+        redirect_uri = f"{protocol}://{host}/api/auth/callback"
+        
+        token_url = f"https://{auth0_domain}/oauth/token"
+        payload = {
+            "grant_type": "authorization_code",
+            "client_id": client_id,
+            "client_secret": client_secret,
+            "code": code,
+            "redirect_uri": redirect_uri
+        }
+        
+        try:
+            r = requests.post(token_url, json=payload, timeout=10)
+            r.raise_for_status()
+            tokens = r.json()
+            access_token = tokens.get("access_token")
+            
+            userinfo_url = f"https://{auth0_domain}/userinfo"
+            user_r = requests.get(userinfo_url, headers={"Authorization": f"Bearer {access_token}"}, timeout=10)
+            user_r.raise_for_status()
+            user_info = user_r.json()
+            
+            user_data_json = json.dumps(user_info)
+            encoded_data = base64.b64encode(user_data_json.encode('utf-8')).decode('utf-8')
+            signed_session = sign_session_data(encoded_data, auth0_secret)
+            
+            self.send_response(302)
+            self.send_header('Location', '/admin.html')
+            
+            cookie_str = f"session={signed_session}; Path=/; HttpOnly"
+            if protocol == 'https':
+                cookie_str += "; Secure; SameSite=Lax"
+            
+            self.send_header('Set-Cookie', cookie_str)
+            self.send_header('Connection', 'close')
+            self.end_headers()
+            
+        except Exception as e:
+            logger.exception("Failed during Auth0 callback code exchange")
+            self.send_error_page(500, f"Authentication failed: {str(e)}")
+
+    def handle_logout(self):
+        auth0_domain = os.getenv("AUTH0_DOMAIN")
+        client_id = os.getenv("AUTH0_CLIENT_ID")
+        
+        host = self.headers.get('Host')
+        protocol = 'https' if self.headers.get('X-Forwarded-Proto') == 'https' else 'http'
+        return_to = f"{protocol}://{host}/"
+        
+        logout_url = f"https://{auth0_domain}/v2/logout?client_id={client_id}&returnTo={return_to}"
+        self.send_response(302)
+        self.send_header('Location', logout_url)
+        self.send_header('Set-Cookie', 'session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly')
+        self.send_header('Connection', 'close')
+        self.end_headers()
+
+    def handle_api_allow_user(self):
+        auth0_secret = os.getenv("AUTH0_SECRET") or "fallback-default-secret-key-123"
+        session_user = get_session_user(self.headers, auth0_secret)
+        if not is_auth0_user_admin(session_user):
+            self.send_json(403, {"error": "Access denied. Administrator privileges required."})
+            return
+
+        content_length = int(self.headers.get('Content-Length', 0))
+        post_data = self.rfile.read(content_length)
+        try:
+            body = json.loads(post_data.decode('utf-8'))
+            user_id = int(body.get("user_id"))
+            username = body.get("username")
+            role = body.get("role", "regular")
+            
+            success, err_msg = allow_user(user_id, username, role)
+            if success:
+                self.send_json(200, {"ok": True})
+            else:
+                self.send_json(500, {"error": err_msg or "Failed to update user in database."})
+        except Exception as e:
+            self.send_json(400, {"error": f"Invalid request body: {str(e)}"})
+
+    def handle_api_revoke_user(self):
+        auth0_secret = os.getenv("AUTH0_SECRET") or "fallback-default-secret-key-123"
+        session_user = get_session_user(self.headers, auth0_secret)
+        if not is_auth0_user_admin(session_user):
+            self.send_json(403, {"error": "Access denied. Administrator privileges required."})
+            return
+
+        content_length = int(self.headers.get('Content-Length', 0))
+        post_data = self.rfile.read(content_length)
+        try:
+            body = json.loads(post_data.decode('utf-8'))
+            user_id = int(body.get("user_id"))
+            
+            success, err_msg = revoke_user(user_id)
+            if success:
+                self.send_json(200, {"ok": True})
+            else:
+                self.send_json(500, {"error": err_msg or "Failed to deactivate user in database."})
+        except Exception as e:
+            self.send_json(400, {"error": f"Invalid request body: {str(e)}"})
 
 if __name__ == '__main__':
     from http.server import HTTPServer
