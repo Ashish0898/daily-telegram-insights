@@ -262,12 +262,18 @@ class handler(BaseHTTPRequestHandler):
         if path == '/admin.html':
             auth0_secret = os.getenv("AUTH0_SECRET") or "fallback-default-secret-key-123"
             session_user = get_session_user(self.headers, auth0_secret)
-            if not session_user or not is_auth0_user_admin(session_user):
-                # Redirect to login
+            
+            # If not logged in at all, redirect to Auth0 login flow
+            if not session_user:
                 self.send_response(302)
                 self.send_header('Location', '/api/auth/login')
                 self.send_header('Connection', 'close')
                 self.end_headers()
+                return
+                
+            # If logged in but not an authorized admin, show access denied page instead of redirect loop
+            if not is_auth0_user_admin(session_user):
+                self.send_error_page(403, f"Access Denied: The user '{session_user.get('email')}' is not authorized as an administrator. Please check that this email is added to the ADMIN_EMAILS environment variable.")
                 return
 
             root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -951,6 +957,8 @@ class handler(BaseHTTPRequestHandler):
         protocol = 'https' if self.headers.get('X-Forwarded-Proto') == 'https' else 'http'
         redirect_uri = f"{protocol}://{host}/api/auth/callback"
         
+        logger.info(f"[Auth0 Login] Host Header: '{host}' | Protocol: '{protocol}' | Generated Redirect URI: '{redirect_uri}'")
+        
         auth_url = (
             f"https://{auth0_domain}/authorize?"
             f"response_type=code&"
@@ -980,6 +988,8 @@ class handler(BaseHTTPRequestHandler):
         host = self.headers.get('Host')
         protocol = 'https' if self.headers.get('X-Forwarded-Proto') == 'https' else 'http'
         redirect_uri = f"{protocol}://{host}/api/auth/callback"
+        
+        logger.info(f"[Auth0 Callback] Using redirect_uri for code exchange: '{redirect_uri}'")
         
         token_url = f"https://{auth0_domain}/oauth/token"
         payload = {

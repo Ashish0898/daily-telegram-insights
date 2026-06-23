@@ -44,6 +44,7 @@ This file serves as a status tracker and resume plan for the **Daily Telegram In
     - Built a premium dark-theme admin dashboard **[admin.html](file:///mnt/c/Users/Ashish/Downloads/playground/daily-telegram-insights/admin.html)** displaying a database-driven table of registered users.
     - Created admin action API endpoints `POST /api/users/allow` and `POST /api/users/revoke` in [api/index.py](file:///mnt/c/Users/Ashish/Downloads/playground/daily-telegram-insights/api/index.py) to activate/deactivate user access dynamically directly from the dashboard.
     - Configured admin access validation using both environment-level allowlists (`ADMIN_EMAILS` check) and database role-checks (`is_user_admin` lookup).
+    - Fixed an infinite redirect loop bug by rendering a clean 403 Forbidden error page for logged-in but unauthorized users (instead of looping them back through the login redirect flow).
 
 ---
 
