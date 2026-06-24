@@ -411,6 +411,10 @@
           <label for="new-username">Username (Optional)</label>
           <input type="text" id="new-username" placeholder="e.g. johndoe">
         </div>
+        <div class="input-group">
+          <label for="new-email">Email (Optional)</label>
+          <input type="email" id="new-email" placeholder="e.g. admin@domain.com">
+        </div>
         <div class="input-group" style="max-width: 150px;">
           <label for="new-role">Role</label>
           <select id="new-role">
@@ -429,6 +433,7 @@
             <tr>
               <th>Telegram User ID</th>
               <th>Username</th>
+              <th>Email</th>
               <th>Role</th>
               <th>Status</th>
               <th>Added On</th>
@@ -480,7 +485,7 @@
             
           const actionBtn = user.is_active
             ? `<button class="btn-action btn-revoke" onclick="revokeUser(${user.user_id})">Deactivate</button>`
-            : `<button class="btn-action btn-allow" onclick="allowUser(${user.user_id}, '${user.username || ''}', '${user.role || 'regular'}')">Activate</button>`;
+            : `<button class="btn-action btn-allow" onclick="allowUser(${user.user_id}, '${user.username || ''}', '${user.role || 'regular'}', '${user.email || ''}')">Activate</button>`;
           
           // Format date
           let dateStr = 'N/A';
@@ -492,6 +497,7 @@
           tr.innerHTML = `
             <td><span class="user-id-code">${user.user_id}</span></td>
             <td>${user.username ? '@' + user.username : '<i>None</i>'}</td>
+            <td>${user.email ? user.email : '<i>None</i>'}</td>
             <td>${roleBadge}</td>
             <td>${statusBadge}</td>
             <td>${dateStr}</td>
@@ -518,12 +524,12 @@
       }, 5000);
     }
 
-    async function allowUser(userId, username, role) {
+    async function allowUser(userId, username, role, email) {
       try {
         const response = await fetch('/api/users/allow', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ user_id: userId, username: username || null, role: role })
+          body: JSON.stringify({ user_id: userId, username: username || null, role: role, email: email || null })
         });
         const data = await response.json();
         if (response.ok && data.ok) {
@@ -560,19 +566,22 @@
       const userIdInput = document.getElementById('new-userid');
       const usernameInput = document.getElementById('new-username');
       const roleInput = document.getElementById('new-role');
+      const emailInput = document.getElementById('new-email');
       
       const userId = parseInt(userIdInput.value);
       const username = usernameInput.value.trim().replace(/^@/, '');
       const role = roleInput.value;
+      const email = emailInput.value.trim();
 
       if (isNaN(userId)) {
         showAlert('Please enter a valid numeric Telegram User ID.', 'error');
         return;
       }
 
-      await allowUser(userId, username || null, role);
+      await allowUser(userId, username || null, role, email || null);
       userIdInput.value = '';
       usernameInput.value = '';
+      emailInput.value = '';
     }
 
     // Attempt to load profile name from URL params or a session request if possible.
