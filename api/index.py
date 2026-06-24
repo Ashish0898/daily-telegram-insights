@@ -40,7 +40,8 @@ from src.auth import (
     is_auth0_user_admin,
     get_auth_url,
     exchange_code_for_user_info,
-    get_logout_url
+    get_logout_url,
+    verify_cron_request
 )
 from src.schedulers import execute_fact_scheduler, execute_news_scheduler
 from src.telegram_webhook import process_telegram_webhook
@@ -186,10 +187,16 @@ class handler(BaseHTTPRequestHandler):
             self.send_json(400, {"error": f"Invalid JSON payload: {str(e)}"})
 
     def handle_fact_get(self):
+        if not verify_cron_request(self.headers):
+            self.send_json(403, {"error": "Access Denied: Cron authorization required"})
+            return
         status_code, response_body = execute_fact_scheduler()
         self.send_json(status_code, response_body)
 
     def handle_news_get(self, query_string: str):
+        if not verify_cron_request(self.headers):
+            self.send_json(403, {"error": "Access Denied: Cron authorization required"})
+            return
         query_params = parse_qs(query_string)
         status_code, response_body = execute_news_scheduler(query_params)
         self.send_json(status_code, response_body)
