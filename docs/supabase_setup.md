@@ -53,25 +53,35 @@ Run this SQL script in your Supabase **SQL Editor** if creating the table for th
 create table allowed_users (
   user_id bigint primary key,            -- Telegram User ID
   username text,                         -- Telegram username (for reference)
+  email text,                            -- Auth0 Email address (for dashboard authentication)
   role text default 'regular' check (role in ('admin', 'regular')), -- User role (admin or regular)
   is_active boolean default true not null, -- Active status (true = allowed, false = revoked)
   created_at timestamp with time zone default timezone('utc'::text, now()) not null,
   added_by text default current_user
 );
 
--- Example: Add yourself as an admin (replace with your Telegram User ID)
-insert into allowed_users (user_id, username, role, is_active) 
-values (973133568, 'your_telegram_username', 'admin', true);
+-- Index the email column for fast lookups
+create index if not exists idx_allowed_users_email 
+on allowed_users (email);
+
+-- Example: Add yourself as an admin (replace with your Telegram User ID and Email)
+insert into allowed_users (user_id, username, role, is_active, email) 
+values (973133568, 'your_telegram_username', 'admin', true, 'your_email@example.com');
 ```
 
 ### Migration SQL (For Existing Tables)
-If you already created the `allowed_users` table, run this SQL script to add the new columns:
+If you already created the `allowed_users` table, run this SQL script to add the new columns and indexes:
 
 ```sql
--- Add role and is_active columns to allowed_users
+-- Add role, is_active, and email columns to allowed_users
 alter table allowed_users 
   add column if not exists role text default 'regular' check (role in ('admin', 'regular')),
-  add column if not exists is_active boolean default true not null;
+  add column if not exists is_active boolean default true not null,
+  add column if not exists email text;
+
+-- Create index for email lookups
+create index if not exists idx_allowed_users_email 
+on allowed_users (email);
 ```
 
 > [!TIP]

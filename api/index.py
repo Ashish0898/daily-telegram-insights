@@ -40,7 +40,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 's
 from src.generate_fact import generate_fact, generate_dynamic_news_query
 from src.send_news import execute_and_send_news
 from src.talivy_search import talivy_search, format_search_results, parse_talivy_results, clean_text_for_telegram
-from src.db import log_request, is_user_allowed, is_user_admin, allow_user, revoke_user, register_inactive_user_if_new, resolve_user_details, get_all_users
+from src.db import log_request, is_user_allowed, is_user_admin, allow_user, revoke_user, register_inactive_user_if_new, resolve_user_details, get_all_users, is_email_admin
 
 import hmac
 import hashlib
@@ -88,22 +88,20 @@ def is_auth0_user_admin(user_info: dict) -> bool:
     if not user_info:
         return False
     
-    # 1. Check environment variable list of admin emails
-    admin_emails_env = os.getenv("ADMIN_EMAILS")
     user_email = user_info.get("email")
-    if user_email and admin_emails_env:
+    if not user_email:
+        return False
+
+    # 1. First priority: Check the database by email
+    if is_email_admin(user_email):
+        return True
+
+    # 2. Fallback check of environment variable list of admin emails (useful for bootstrapping)
+    admin_emails_env = os.getenv("ADMIN_EMAILS")
+    if admin_emails_env:
         admin_emails = [e.strip().lower() for e in admin_emails_env.split(',') if e.strip()]
         if user_email.lower() in admin_emails:
             return True
-            
-    # 2. Check if their nickname matches an admin in the database
-    nickname = user_info.get("nickname")
-    if nickname:
-        from src.db import resolve_user_details, is_user_admin
-        user_id, resolved_username = resolve_user_details(nickname)
-        if user_id and is_user_admin(user_id):
-            return True
-            
     return False
 
 
@@ -273,7 +271,7 @@ class handler(BaseHTTPRequestHandler):
                 
             # If logged in but not an authorized admin, show access denied page instead of redirect loop
             if not is_auth0_user_admin(session_user):
-                self.send_error_page(403, f"Access Denied: The user '{session_user.get('email')}' is not authorized as an administrator. Please check that this email is added to the ADMIN_EMAILS environment variable.")
+                self.send_error_page(403, f"Access Denied: The user '{session_user.get('email')}' is not authorized as an administrator. Please contact the bot owner to request administrative access.")
                 return
 
             root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
@@ -1059,8 +1057,9 @@ class handler(BaseHTTPRequestHandler):
             user_id = int(body.get("user_id"))
             username = body.get("username")
             role = body.get("role", "regular")
+            email = body.get("email")
             
-            success, err_msg = allow_user(user_id, username, role)
+            success, err_msg = allow_user(user_id, username, role, email)
             if success:
                 self.send_json(200, {"ok": True})
             else:

@@ -42,8 +42,11 @@ This file serves as a status tracker and resume plan for the **Daily Telegram In
     - Integrated standard **Auth0 Universal Login** flow (Authorization Code Flow) with routes `/api/auth/login`, `/api/auth/callback`, and `/api/auth/logout` in [api/index.py](file:///mnt/c/Users/Ashish/Downloads/playground/daily-telegram-insights/api/index.py).
     - Designed and implemented a secure session cookie mechanism using custom HMAC-SHA256 signatures, avoiding any external library dependencies.
     - Built a premium dark-theme admin dashboard **[admin.html](file:///mnt/c/Users/Ashish/Downloads/playground/daily-telegram-insights/admin.html)** displaying a database-driven table of registered users.
-    - Created admin action API endpoints `POST /api/users/allow` and `POST /api/users/revoke` in [api/index.py](file:///mnt/c/Users/Ashish/Downloads/playground/daily-telegram-insights/api/index.py) to activate/deactivate user access dynamically directly from the dashboard.
-    - Configured admin access validation using both environment-level allowlists (`ADMIN_EMAILS` check) and database role-checks (`is_user_admin` lookup).
+    - Updated `GET /api/users` and added endpoints `POST /api/users/allow` and `POST /api/users/revoke` in [api/index.py](file:///mnt/c/Users/Ashish/Downloads/playground/daily-telegram-insights/api/index.py) to manage access and associate Auth0 email addresses dynamically.
+    - Switched to **database-driven email verification** by checking the Auth0 email against the `email` column in the `allowed_users` table in Supabase. It uses a new `is_email_admin` helper in [src/db.py](file:///mnt/c/Users/Ashish/Downloads/playground/daily-telegram-insights/src/db.py) with exact (`.eq()`) query matching.
+    - Removed the nickname-based login fallback logic that performed username-based (`ilike`) database lookups, ensuring Auth0 admin authorization is restricted strictly to email matches.
+    - Maintained environment-level variables (`ADMIN_EMAILS` check) as a fallback mechanism for initial bootstrapping.
+    - Enhanced the administration interface at [admin.html](file:///mnt/c/Users/Ashish/Downloads/playground/daily-telegram-insights/admin.html) to display, add, and update email addresses directly from the dashboard.
     - Fixed an infinite redirect loop bug by rendering a clean 403 Forbidden error page for logged-in but unauthorized users (instead of looping them back through the login redirect flow).
 
 ---

@@ -123,7 +123,7 @@ def is_user_admin(user_id: int) -> bool:
                     allowed_ids.add(chunk)
     return str(user_id) in allowed_ids
 
-def allow_user(user_id: int, username: str = None, role: str = "regular") -> tuple[bool, str | None]:
+def allow_user(user_id: int, username: str = None, role: str = "regular", email: str = None) -> tuple[bool, str | None]:
     """
     Inserts or updates a user in the 'allowed_users' table, setting them to active.
     Returns (True, None) if successful, (False, error_message) otherwise.
@@ -142,6 +142,8 @@ def allow_user(user_id: int, username: str = None, role: str = "regular") -> tup
         payload["username"] = username
     if role in ("admin", "regular"):
         payload["role"] = role
+    if email is not None:
+        payload["email"] = email
 
     try:
         client.table("allowed_users").upsert(payload).execute()
@@ -271,6 +273,25 @@ def get_all_users() -> list[dict] | None:
     except Exception as e:
         logger.exception("Failed to fetch all users from database")
         return None
+
+
+def is_email_admin(email: str) -> bool:
+    """
+    Checks if an email address is associated with an active admin in the 'allowed_users' table.
+    """
+    if not email:
+        return False
+    client = get_supabase_client()
+    if not client:
+        return False
+    try:
+        response = client.table("allowed_users").select("role, is_active").eq("email", email).execute()
+        if response.data and len(response.data) > 0:
+            user_data = response.data[0]
+            return user_data.get("role") == "admin" and user_data.get("is_active", True)
+    except Exception as e:
+        logger.error(f"Failed to query 'allowed_users' by email {email}: {e}")
+    return False
 
 
 
