@@ -285,7 +285,7 @@ def is_email_admin(email: str) -> bool:
     if not client:
         return False
     try:
-        response = client.table("allowed_users").select("role, is_active").ilike("email", email).execute()
+        response = client.table("allowed_users").select("role, is_active").eq("email", email).execute()
         if response.data and len(response.data) > 0:
             user_data = response.data[0]
             return user_data.get("role") == "admin" and user_data.get("is_active", True)

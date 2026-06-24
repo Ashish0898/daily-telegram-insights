@@ -102,15 +102,6 @@ def is_auth0_user_admin(user_info: dict) -> bool:
         admin_emails = [e.strip().lower() for e in admin_emails_env.split(',') if e.strip()]
         if user_email.lower() in admin_emails:
             return True
-            
-    # 3. Check if their nickname matches an admin in the database
-    nickname = user_info.get("nickname")
-    if nickname:
-        from src.db import resolve_user_details, is_user_admin
-        user_id, resolved_username = resolve_user_details(nickname)
-        if user_id and is_user_admin(user_id):
-            return True
-            
     return False
 
 
