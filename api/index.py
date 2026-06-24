@@ -271,7 +271,7 @@ class handler(BaseHTTPRequestHandler):
                 
             # If logged in but not an authorized admin, show access denied page instead of redirect loop
             if not is_auth0_user_admin(session_user):
-                self.send_error_page(403, f"Access Denied: The user '{session_user.get('email')}' is not authorized as an administrator. Please check that this email is added to the ADMIN_EMAILS environment variable.")
+                self.send_error_page(403, f"Access Denied: The user '{session_user.get('email')}' is not authorized as an administrator. Please verify that this email is added and set as an active admin in the database allowed_users table, or added to the ADMIN_EMAILS environment variable.")
                 return
 
             root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
