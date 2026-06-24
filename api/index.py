@@ -712,12 +712,13 @@ class handler(BaseHTTPRequestHandler):
         start_time = time.time()
         logger.info("Incoming GET request for users list")
 
+        query_params = parse_qs(query_string)
+
         auth0_secret = os.getenv("AUTH0_SECRET") or "fallback-default-secret-key-123"
         session_user = get_session_user(self.headers, auth0_secret)
         is_admin = is_auth0_user_admin(session_user)
 
         if not is_admin:
-            query_params = parse_qs(query_string)
             admin_id_str = query_params.get("admin_id", [None])[0]
 
             if admin_id_str:
