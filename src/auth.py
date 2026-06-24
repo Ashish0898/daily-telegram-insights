@@ -132,3 +132,23 @@ def get_logout_url(host: str, protocol: str) -> str:
     client_id = os.getenv("AUTH0_CLIENT_ID")
     return_to = f"{protocol}://{host}/"
     return f"https://{auth0_domain}/v2/logout?client_id={client_id}&returnTo={return_to}"
+
+def verify_cron_request(headers) -> bool:
+    """
+    Verifies that the request was triggered by Vercel Cron.
+    Only enforces verification if CRON_SECRET is set in environment variables.
+    """
+    cron_secret = os.getenv("CRON_SECRET")
+    if not cron_secret:
+        return True
+
+    auth_header = headers.get("Authorization")
+    if not auth_header:
+        logger.warning("[Cron Auth] Authorization header missing.")
+        return False
+
+    expected_value = f"Bearer {cron_secret}"
+    is_valid = hmac.compare_digest(auth_header.encode('utf-8'), expected_value.encode('utf-8'))
+    if not is_valid:
+        logger.warning("[Cron Auth] Authorization header token mismatch.")
+    return is_valid
