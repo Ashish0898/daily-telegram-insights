@@ -48,6 +48,21 @@ This file serves as a status tracker and resume plan for the **Daily Telegram In
     - Maintained environment-level variables (`ADMIN_EMAILS` check) as a fallback mechanism for initial bootstrapping.
     - Enhanced the administration interface at [admin.html](file:///mnt/c/Users/Ashish/Downloads/playground/daily-telegram-insights/admin.html) to display, add, and update email addresses directly from the dashboard.
     - Fixed an infinite redirect loop bug by rendering a clean 403 Forbidden error page for logged-in but unauthorized users (instead of looping them back through the login redirect flow).
+13. **Router Refactoring & Code Modularization**:
+    - Extracted core logic from [api/index.py](file:///mnt/c/Users/Ashish/Downloads/playground/daily-telegram-insights/api/index.py) into smaller modules:
+      - [src/auth.py](file:///mnt/c/Users/Ashish/Downloads/playground/daily-telegram-insights/src/auth.py) for Auth0 authentication and session verification.
+      - [src/schedulers.py](file:///mnt/c/Users/Ashish/Downloads/playground/daily-telegram-insights/src/schedulers.py) for fact and news trigger handlers.
+      - [src/telegram_utils.py](file:///mnt/c/Users/Ashish/Downloads/playground/daily-telegram-insights/src/telegram_utils.py) for Telegram text/command parsing and message dispatch.
+      - [src/telegram_webhook.py](file:///mnt/c/Users/Ashish/Downloads/playground/daily-telegram-insights/src/telegram_webhook.py) for Telegram interactive bot commands.
+      - [src/admin_handlers.py](file:///mnt/c/Users/Ashish/Downloads/playground/daily-telegram-insights/src/admin_handlers.py) for administrative API execution and user table HTML rendering.
+    - Shrunk the router [api/index.py](file:///mnt/c/Users/Ashish/Downloads/playground/daily-telegram-insights/api/index.py) to under 300 lines.
+14. **Securing Vercel Cron Job Triggers**:
+    - Added bearer token authorization checking (`verify_cron_request`) inside [src/auth.py](file:///mnt/c/Users/Ashish/Downloads/playground/daily-telegram-insights/src/auth.py) to validate that calls to `/api/fact` and `/api/news` are authenticated with Vercel's standard `CRON_SECRET` header.
+    - Implemented a local bypass that permits testing without headers if `CRON_SECRET` is not set locally.
+15. **Landing Page Link Alignment**:
+    - Updated links in [index.html](file:///mnt/c/Users/Ashish/Downloads/playground/daily-telegram-insights/index.html) to dynamically query and bind to the active bot username (`PA_Sophia_bot`) and reference your active GitHub repository.
+16. **Repository CODEOWNERS Setup**:
+    - Created [.github/CODEOWNERS](file:///mnt/c/Users/Ashish/Downloads/playground/daily-telegram-insights/.github/CODEOWNERS) to automatically request reviews from @Ashish0898 on code adjustments.
 
 ---
 

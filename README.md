@@ -55,6 +55,13 @@ Vercel will automatically run the scheduled endpoints defined in `vercel.json`:
 - `GET /api/fact` — send a daily fact
 - `GET /api/news` — send a daily dynamic news update
 
+#### Securing Cron Endpoints
+To prevent external users from triggering scheduled execution and wasting compute/API tokens, these routes are secured using Vercel's standard Bearer Token verification:
+1. Generate a strong random key (e.g. 16+ characters).
+2. Add it as an environment variable named `CRON_SECRET` in your **Vercel Project Settings**.
+3. Vercel will automatically attach this secret inside the `Authorization: Bearer <CRON_SECRET>` header on all scheduler triggers. Requests without this valid header will receive a `403 Forbidden` error.
+4. *(Note: Verification is automatically bypassed during local development if `CRON_SECRET` is not set in your local `.env` file, ensuring local testing remains frictionless).*
+
 For detailed local execution commands, query parameters, and testing payload formats, see the **[Bot API & Webhook Usage Guide](docs/api_usage.md)**.
 
 ---
