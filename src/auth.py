@@ -140,6 +140,7 @@ def verify_cron_request(headers) -> bool:
     """
     cron_secret = os.getenv("CRON_SECRET")
     if not cron_secret:
+        logger.warning("[Cron Auth] CRON_SECRET not set in environment. Skipping verification.")
         return True
 
     auth_header = headers.get("Authorization")
@@ -151,4 +152,6 @@ def verify_cron_request(headers) -> bool:
     is_valid = hmac.compare_digest(auth_header.encode('utf-8'), expected_value.encode('utf-8'))
     if not is_valid:
         logger.warning("[Cron Auth] Authorization header token mismatch.")
+    
+    logger.info(f"[Cron Auth] Verification result: {is_valid}")
     return is_valid
