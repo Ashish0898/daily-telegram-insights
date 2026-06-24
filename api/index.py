@@ -40,69 +40,14 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 's
 from src.generate_fact import generate_fact, generate_dynamic_news_query
 from src.send_news import execute_and_send_news
 from src.talivy_search import talivy_search, format_search_results, parse_talivy_results, clean_text_for_telegram
-from src.db import log_request, is_user_allowed, is_user_admin, allow_user, revoke_user, register_inactive_user_if_new, resolve_user_details, get_all_users, is_email_admin
+from src.db import log_request, is_user_allowed, is_user_admin, allow_user, revoke_user, register_inactive_user_if_new, resolve_user_details, get_all_users
+from src.auth import sign_session_data, get_session_user, is_auth0_user_admin, get_auth_url, exchange_code_for_user_info, get_logout_url
 
-import hmac
-import hashlib
 import base64
-from http.cookies import SimpleCookie
 
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 TELEGRAM_API = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-
-def sign_session_data(data_str: str, secret: str) -> str:
-    signature = hmac.new(secret.encode('utf-8'), data_str.encode('utf-8'), hashlib.sha256).hexdigest()
-    return f"{data_str}.{signature}"
-
-def verify_session_data(signed_str: str, secret: str) -> str | None:
-    if not signed_str or '.' not in signed_str:
-        return None
-    try:
-        data_str, signature = signed_str.rsplit('.', 1)
-        expected_sig = hmac.new(secret.encode('utf-8'), data_str.encode('utf-8'), hashlib.sha256).hexdigest()
-        if hmac.compare_digest(signature, expected_sig):
-            return data_str
-    except Exception:
-        pass
-    return None
-
-def get_session_user(headers, secret: str) -> dict | None:
-    cookie_header = headers.get('Cookie')
-    if not cookie_header:
-        return None
-    cookie = SimpleCookie()
-    cookie.load(cookie_header)
-    if 'session' not in cookie:
-        return None
-    session_value = cookie['session'].value
-    verified_data = verify_session_data(session_value, secret)
-    if not verified_data:
-        return None
-    try:
-        return json.loads(base64.b64decode(verified_data).decode('utf-8'))
-    except Exception:
-        return None
-
-def is_auth0_user_admin(user_info: dict) -> bool:
-    if not user_info:
-        return False
-    
-    user_email = user_info.get("email")
-    if not user_email:
-        return False
-
-    # 1. First priority: Check the database by email
-    if is_email_admin(user_email):
-        return True
-
-    # 2. Fallback check of environment variable list of admin emails (useful for bootstrapping)
-    admin_emails_env = os.getenv("ADMIN_EMAILS")
-    if admin_emails_env:
-        admin_emails = [e.strip().lower() for e in admin_emails_env.split(',') if e.strip()]
-        if user_email.lower() in admin_emails:
-            return True
-    return False
 
 
 def parse_command(text: str) -> dict:
@@ -949,22 +894,9 @@ class handler(BaseHTTPRequestHandler):
         self.wfile.write(html_err.encode('utf-8'))
 
     def handle_login(self):
-        auth0_domain = os.getenv("AUTH0_DOMAIN")
-        client_id = os.getenv("AUTH0_CLIENT_ID")
-        
         host = self.headers.get('Host')
         protocol = 'https' if self.headers.get('X-Forwarded-Proto') == 'https' else 'http'
-        redirect_uri = f"{protocol}://{host}/api/auth/callback"
-        
-        logger.info(f"[Auth0 Login] Host Header: '{host}' | Protocol: '{protocol}' | Generated Redirect URI: '{redirect_uri}'")
-        
-        auth_url = (
-            f"https://{auth0_domain}/authorize?"
-            f"response_type=code&"
-            f"client_id={client_id}&"
-            f"redirect_uri={redirect_uri}&"
-            f"scope=openid%20profile%20email"
-        )
+        auth_url = get_auth_url(host, protocol)
         self.send_response(302)
         self.send_header('Location', auth_url)
         self.send_header('Connection', 'close')
@@ -979,36 +911,12 @@ class handler(BaseHTTPRequestHandler):
             return
         
         code = code_list[0]
-        auth0_domain = os.getenv("AUTH0_DOMAIN")
-        client_id = os.getenv("AUTH0_CLIENT_ID")
-        client_secret = os.getenv("AUTH0_CLIENT_SECRET")
         auth0_secret = os.getenv("AUTH0_SECRET") or "fallback-default-secret-key-123"
-        
         host = self.headers.get('Host')
         protocol = 'https' if self.headers.get('X-Forwarded-Proto') == 'https' else 'http'
-        redirect_uri = f"{protocol}://{host}/api/auth/callback"
-        
-        logger.info(f"[Auth0 Callback] Using redirect_uri for code exchange: '{redirect_uri}'")
-        
-        token_url = f"https://{auth0_domain}/oauth/token"
-        payload = {
-            "grant_type": "authorization_code",
-            "client_id": client_id,
-            "client_secret": client_secret,
-            "code": code,
-            "redirect_uri": redirect_uri
-        }
         
         try:
-            r = requests.post(token_url, json=payload, timeout=10)
-            r.raise_for_status()
-            tokens = r.json()
-            access_token = tokens.get("access_token")
-            
-            userinfo_url = f"https://{auth0_domain}/userinfo"
-            user_r = requests.get(userinfo_url, headers={"Authorization": f"Bearer {access_token}"}, timeout=10)
-            user_r.raise_for_status()
-            user_info = user_r.json()
+            user_info = exchange_code_for_user_info(code, host, protocol)
             
             user_data_json = json.dumps(user_info)
             encoded_data = base64.b64encode(user_data_json.encode('utf-8')).decode('utf-8')
@@ -1030,14 +938,9 @@ class handler(BaseHTTPRequestHandler):
             self.send_error_page(500, f"Authentication failed: {str(e)}")
 
     def handle_logout(self):
-        auth0_domain = os.getenv("AUTH0_DOMAIN")
-        client_id = os.getenv("AUTH0_CLIENT_ID")
-        
         host = self.headers.get('Host')
         protocol = 'https' if self.headers.get('X-Forwarded-Proto') == 'https' else 'http'
-        return_to = f"{protocol}://{host}/"
-        
-        logout_url = f"https://{auth0_domain}/v2/logout?client_id={client_id}&returnTo={return_to}"
+        logout_url = get_logout_url(host, protocol)
         self.send_response(302)
         self.send_header('Location', logout_url)
         self.send_header('Set-Cookie', 'session=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT; HttpOnly')
