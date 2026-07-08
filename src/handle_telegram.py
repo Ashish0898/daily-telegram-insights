@@ -4,6 +4,7 @@
 import json
 import os
 import requests
+from datetime import datetime, timezone
 
 from generate_fact import generate_fact
 
@@ -47,7 +48,10 @@ def build_response(command: str, query: str | None) -> str:
             "Use /help to show this message again."
         )
 
-    return generate_fact()
+    content, insight_type = generate_fact()
+    header = "<b>🎯 Daily Fact</b>" if insight_type == "fact" else "<b>💡 Daily Quote</b>"
+    timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    return f"{header}\n\n{content}\n\n<i>{timestamp}</i>"
 
 
 def main() -> None:

@@ -47,6 +47,14 @@ FACT_SEEDS = [
     "history of color pigments and dyes"
 ]
 
+QUOTE_SEEDS = [
+    "Socrates", "Aristotle", "Marcus Aurelius", "Seneca", "Plato", "Epictetus",
+    "Friedrich Nietzsche", "Confucius", "Lao Tzu", "Immanuel Kant", "Ralph Waldo Emerson",
+    "Henry David Thoreau", "Albert Camus", "Arthur Schopenhauer", "Baruch Spinoza",
+    "Marcus Tullius Cicero", "Augustine of Hippo", "Thomas Aquinas", "René Descartes",
+    "Michel de Montaigne", "Søren Kierkegaard", "Gautama Buddha", "Rumi", "Kahlil Gibran"
+]
+
 EXCLUDE_CLICHES = (
     "Do NOT generate extremely common or overused trivia clichés, such as: "
     "honey never spoiling, octopuses having three hearts/blue blood, Cleopatra living closer to the iPhone than "
@@ -56,31 +64,47 @@ EXCLUDE_CLICHES = (
 
 
 def generate_fact(return_topic=False):
-    """Generate a random fact using GitHub LLM API."""
+    """Generate a random fact or quote using GitHub LLM API."""
     headers = {
         "Content-Type": "application/json",
     }
 
     # Randomize parameters for each call to increase diversity
     temperature = random.uniform(0.7, 1.5)
-    top_p = random.uniform(0.75, 0.95)
 
-    seed = random.choice(FACT_SEEDS)
-    logger.info(f"Selected seed topic: {seed}")
+    # Randomly choose between fact and quote
+    insight_type = random.choice(["fact", "quote"])
 
-    user_content = (
-        f"The current date is {datetime.now(timezone.utc).strftime('%B %Y')}.\n"
-        f"Generate one highly interesting, concise, and surprising random fact (max 2 sentences) "
-        f"related to this specific topic: '{seed}'.\n\n"
-        f"IMPORTANT: {EXCLUDE_CLICHES}\n\n"
-        "Focus on lesser-known details, surprising historical oddities, or unique scientific findings."
-    )
+    if insight_type == "fact":
+        seed = random.choice(FACT_SEEDS)
+        logger.info(f"Selected seed topic for fact: {seed}")
+        system_content = "You are a fact generator that creates unique, diverse, and interesting random facts. Focus on unusual trivia, surprising scientific discoveries, historical oddities, and lesser-known information from various domains. Never repeat the same fact twice."
+        user_content = (
+            f"The current date is {datetime.now(timezone.utc).strftime('%B %Y')}.\n"
+            f"Generate one highly interesting, concise, and surprising random fact (max 2 sentences) "
+            f"related to this specific topic: '{seed}'.\n\n"
+            f"IMPORTANT: {EXCLUDE_CLICHES}\n\n"
+            "Focus on lesser-known details, surprising historical oddities, or unique scientific findings."
+        )
+    else:
+        seed = random.choice(QUOTE_SEEDS)
+        logger.info(f"Selected seed philosopher/thinker for quote: {seed}")
+        system_content = "You are a quote curator that provides deep, inspiring, and insightful philosophical quotes along with a very brief explanation or context. Focus on quotes about wisdom, life, ethics, virtue, and knowledge. Never repeat the same quote twice."
+        user_content = (
+            f"The current date is {datetime.now(timezone.utc).strftime('%B %Y')}.\n"
+            f"Provide an insightful, authentic, and inspiring quote by or attributed to '{seed}'.\n"
+            f"Followed by a single brief, impactful sentence of context, explanation, or modern takeaway.\n\n"
+            f"Format it beautifully, putting the quote in quotation marks, the author's name on a new line preceded by an em-dash (—), and the takeaway on a new line after a double newline, for example:\n"
+            f'"The only true wisdom is in knowing you know nothing."\n'
+            f"— Socrates\n\n"
+            f"This quote reminds us to remain humble and open-minded in our pursuit of knowledge."
+        )
 
     payload = {
         "messages": [
             {
                 "role": "system",
-                "content": "You are a fact generator that creates unique, diverse, and interesting random facts. Focus on unusual trivia, surprising scientific discoveries, historical oddities, and lesser-known information from various domains. Never repeat the same fact twice.",
+                "content": system_content,
             },
             {
                 "role": "user",
@@ -88,13 +112,11 @@ def generate_fact(return_topic=False):
             },
         ],
         "temperature": temperature,
-        # "top_p": top_p,
-        # "max_tokens": 200,
         "model": MODEL_NAME,
     }
 
     try:
-        logger.info(f"Calling GitHub LLM API (model: {MODEL_NAME}, temperature: {temperature:.2f})")
+        logger.info(f"Calling GitHub LLM API ({insight_type}) (model: {MODEL_NAME}, temperature: {temperature:.2f})")
         response = requests.post(
             f"{GITHUB_ENDPOINT}/chat/completions",
             headers={**headers, "Authorization": f"Bearer {GITHUB_TOKEN}"},
@@ -103,10 +125,10 @@ def generate_fact(return_topic=False):
         )
         response.raise_for_status()
         data = response.json()
-        fact = data["choices"][0]["message"]["content"]
+        content = data["choices"][0]["message"]["content"].strip()
         if return_topic:
-            return fact.strip(), seed
-        return fact.strip()
+            return content, seed, insight_type
+        return content, insight_type
     except Exception as e:
         logger.error(f"Error calling GitHub LLM API: {e}")
         raise
@@ -197,18 +219,19 @@ def send_telegram_message(message):
 
 
 def main():
-    """Main function: generate fact and send to Telegram."""
+    """Main function: generate fact or quote and send to Telegram."""
     try:
         if not GITHUB_TOKEN:
             raise ValueError("GITHUB_TOKEN is not set")
 
-        logger.info("Generating random fact...")
-        fact = generate_fact()
-        logger.info(f"Fact generated: {fact}")
+        logger.info("Generating random fact or quote...")
+        content, insight_type = generate_fact()
+        logger.info(f"Insight generated (type: {insight_type}): {content}")
 
         # Format message with emoji and title
         timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-        message = f"<b>🎯 Daily Fact</b>\n\n{fact}\n\n<i>{timestamp}</i>"
+        header = "<b>🎯 Daily Fact</b>" if insight_type == "fact" else "<b>💡 Daily Quote</b>"
+        message = f"{header}\n\n{content}\n\n<i>{timestamp}</i>"
 
         logger.info("Sending to Telegram...")
         send_telegram_message(message)

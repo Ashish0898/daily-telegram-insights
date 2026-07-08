@@ -93,10 +93,11 @@ def get_response_text(cmd: dict, is_admin: bool = False) -> tuple:
         return build_help_message(is_admin), "help"
 
     if cmd_type == "fact":
-        fact, seed = generate_fact(return_topic=True)
+        fact, seed, insight_type = generate_fact(return_topic=True)
         fact_escaped = html.escape(fact, quote=False)
         timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-        return f"<b>🎯 Daily Fact</b>\n\n{fact_escaped}\n\n<i>{timestamp}</i>", seed
+        header = "<b>🎯 Daily Fact</b>" if insight_type == "fact" else "<b>💡 Daily Quote</b>"
+        return f"{header}\n\n{fact_escaped}\n\n<i>{timestamp}</i>", seed
 
     if cmd_type == "news" and not query:
         search_query = generate_dynamic_news_query()

@@ -33,10 +33,11 @@ def execute_fact_scheduler() -> tuple[int, dict]:
         return 500, {"error": err_msg}
 
     try:
-        fact, seed = generate_fact(return_topic=True)
+        fact, seed, insight_type = generate_fact(return_topic=True)
         fact_escaped = html.escape(fact, quote=False)
         timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-        message = f"<b>🎯 Daily Fact</b>\n\n{fact_escaped}\n\n<i>{timestamp}</i>"
+        header = "<b>🎯 Daily Fact</b>" if insight_type == "fact" else "<b>💡 Daily Quote</b>"
+        message = f"{header}\n\n{fact_escaped}\n\n<i>{timestamp}</i>"
 
         send_telegram_message(int(TELEGRAM_CHAT_ID), message)
 
