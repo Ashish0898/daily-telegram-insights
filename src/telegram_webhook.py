@@ -233,6 +233,15 @@ def process_telegram_webhook(body: dict, secret_token: str | None) -> tuple[int,
                         response_text = f"✅ <b>User Allowed Successfully</b>\n\n• <b>User ID:</b> <code>{target_id}</code>\n• <b>Role:</b> {role}"
                         if target_username:
                             response_text += f"\n• <b>Username:</b> @{target_username}"
+                        try:
+                            user_notify_msg = (
+                                "🎉 <b>Access Granted</b>\n\n"
+                                "You have been authorized to use the daily insights bot. "
+                                "Send /start to get started!"
+                            )
+                            send_telegram_message(target_id, user_notify_msg)
+                        except Exception as ex:
+                            logger.error(f"Failed to send access granted notification to user {target_id}: {ex}")
                     else:
                         response_text = f"❌ <b>Error:</b> Failed to update user <code>{target_id}</code> in database. Details: <code>{html.escape(str(err))}</code>"
             
@@ -258,6 +267,14 @@ def process_telegram_webhook(body: dict, secret_token: str | None) -> tuple[int,
                         response_text = f"🚫 <b>User Revoked</b>\n\nUser ID <code>{target_id}</code> has been deactivated. They will no longer have access to the bot."
                         if target_username:
                             response_text += f"\n• <b>Username:</b> @{target_username}"
+                        try:
+                            user_notify_msg = (
+                                "🚫 <b>Access Revoked</b>\n\n"
+                                "Your access to the daily insights bot has been revoked by the administrator."
+                            )
+                            send_telegram_message(target_id, user_notify_msg)
+                        except Exception as ex:
+                            logger.error(f"Failed to send access revoked notification to user {target_id}: {ex}")
                     else:
                         response_text = f"❌ <b>Error:</b> Failed to deactivate user <code>{target_id}</code> in database. Details: <code>{html.escape(str(err))}</code>"
             
