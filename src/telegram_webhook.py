@@ -11,7 +11,8 @@ from src.db import (
     revoke_user,
     register_inactive_user_if_new,
     resolve_user_details,
-    get_all_users
+    get_all_users,
+    get_admin_user_ids
 )
 from src.send_news import execute_and_send_news
 from src.telegram_utils import parse_command, send_telegram_message, get_response_text
@@ -67,6 +68,7 @@ def process_telegram_webhook(body: dict, secret_token: str | None) -> tuple[int,
     # Check if the command is /start
     is_start_command = command_text.strip().lower().startswith("/start")
 
+    was_registered = False
     if is_allowed is None and from_id is not None and is_start_command:
         # Check if they are already allowed via environment variables fallback
         allowed_ids = set()
@@ -80,8 +82,24 @@ def process_telegram_webhook(body: dict, secret_token: str | None) -> tuple[int,
         
         # If not in env vars allowlist, register as inactive in db
         if not (allowed_ids and str(from_id) in allowed_ids):
-            register_inactive_user_if_new(from_id, username)
+            was_registered = register_inactive_user_if_new(from_id, username)
             is_allowed = False
+            
+            # Send notification to admins if they just registered as inactive
+            if was_registered:
+                admin_ids = get_admin_user_ids()
+                user_label = f"@{username}" if username else f"User ID {from_id}"
+                admin_msg = (
+                    f"🔔 <b>New Access Request</b>\n\n"
+                    f"User {user_label} (ID: <code>{from_id}</code>) is requesting access to the daily insights bot.\n\n"
+                    f"To grant access, send:\n"
+                    f"<code>/allow {from_id}</code>"
+                )
+                for admin_id in admin_ids:
+                    try:
+                        send_telegram_message(admin_id, admin_msg)
+                    except Exception as ex:
+                        logger.error(f"Failed to send access request notification to admin {admin_id}: {ex}")
 
     if is_allowed is False:
         access_denied = True
@@ -104,10 +122,20 @@ def process_telegram_webhook(body: dict, secret_token: str | None) -> tuple[int,
 
     if access_denied:
         logger.warning(f"User ID {from_id} not in allowlist. Sending Access Denied message and ignoring request.")
+        
+        # Get admin contact handle from environment
+        admin_username_env = os.getenv("TELEGRAM_ADMIN_USERNAME", "").strip()
+        admin_contact = ""
+        if admin_username_env:
+            contact_handle = admin_username_env
+            if not contact_handle.startswith("@"):
+                contact_handle = "@" + contact_handle
+            admin_contact = f" ({contact_handle})"
+
         if from_id:
-            response_text = f"⚠️ <b>Access Denied</b>\n\nYou are not authorized to use this bot. Please contact the administrator with your User ID: <code>{from_id}</code>"
+            response_text = f"⚠️ <b>Access Denied</b>\n\nYou are not authorized to use this bot. Please contact the administrator{admin_contact} with your User ID: <code>{from_id}</code> to request access."
         else:
-            response_text = "⚠️ <b>Access Denied</b>\n\nYou are not authorized to use this bot."
+            response_text = f"⚠️ <b>Access Denied</b>\n\nYou are not authorized to use this bot. Please contact the administrator{admin_contact} to request access."
         
         if chat_id:
             try:
