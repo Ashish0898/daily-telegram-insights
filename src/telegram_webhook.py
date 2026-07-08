@@ -68,6 +68,8 @@ def process_telegram_webhook(body: dict, secret_token: str | None) -> tuple[int,
     # Check if the command is /start
     is_start_command = command_text.strip().lower().startswith("/start")
 
+    logger.info(f"Authorization check result: is_allowed={is_allowed} for user_id={from_id}, is_start_command={is_start_command}")
+
     was_registered = False
     if is_allowed is None and from_id is not None and is_start_command:
         # Check if they are already allowed via environment variables fallback
@@ -82,12 +84,15 @@ def process_telegram_webhook(body: dict, secret_token: str | None) -> tuple[int,
         
         # If not in env vars allowlist, register as inactive in db
         if not (allowed_ids and str(from_id) in allowed_ids):
+            logger.info(f"User {from_id} is not allowed and ran /start. Registering inactive...")
             was_registered = register_inactive_user_if_new(from_id, username)
+            logger.info(f"Registration result: was_registered={was_registered}")
             is_allowed = False
             
             # Send notification to admins if they just registered as inactive
             if was_registered:
                 admin_ids = get_admin_user_ids()
+                logger.info(f"Admins to notify: {admin_ids}")
                 user_label = f"@{username}" if username else f"User ID {from_id}"
                 admin_msg = (
                     f"🔔 <b>New Access Request</b>\n\n"
@@ -97,7 +102,9 @@ def process_telegram_webhook(body: dict, secret_token: str | None) -> tuple[int,
                 )
                 for admin_id in admin_ids:
                     try:
+                        logger.info(f"Attempting to send access request notification to admin {admin_id}...")
                         send_telegram_message(admin_id, admin_msg)
+                        logger.info(f"Successfully notified admin {admin_id}.")
                     except Exception as ex:
                         logger.error(f"Failed to send access request notification to admin {admin_id}: {ex}")
 
