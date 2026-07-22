@@ -74,12 +74,17 @@ def build_item_message(query: str, item: dict, index: int, total: int) -> str:
     return "\n\n".join(lines).strip()
 
 
-def execute_and_send_news(chat_id: int | str, query: str | None = None, limit: int = 3, summary: bool = False):
+def execute_and_send_news(chat_id: int | str | list[int | str], query: str | None = None, limit: int = 3, summary: bool = False):
     """Fetch news from Talivy and send to Telegram (either as a single summary or batch messages).
+
+    Args:
+        chat_id: Single chat ID or a list of chat IDs.
 
     Returns:
         tuple: (count of news results sent, final search query used, list of message texts sent)
     """
+    chat_ids = [chat_id] if not isinstance(chat_id, list) else chat_id
+
     if not query:
         try:
             from generate_fact import generate_dynamic_news_query
@@ -92,21 +97,27 @@ def execute_and_send_news(chat_id: int | str, query: str | None = None, limit: i
     raw_data = talivy_search(query, limit=limit)
     results = parse_talivy_results(raw_data)
 
-    sent_texts = []
+    messages_to_send = []
     if summary or not results:
         message = build_message(query, raw_data, limit=limit)
-        logger.info("Sending news summary to Telegram...")
-        send_telegram_message(chat_id, message)
-        sent_texts.append(message)
-        return len(results), query, sent_texts
+        messages_to_send.append(message)
     else:
         count = min(limit, len(results))
-        logger.info(f"Sending {count} individual messages to Telegram...")
         for index, item in enumerate(results[:count], start=1):
-            message = build_item_message(query, item, index, count)
-            send_telegram_message(chat_id, message)
-            sent_texts.append(message)
-        return count, query, sent_texts
+            messages_to_send.append(build_item_message(query, item, index, count))
+
+    sent_texts = []
+    logger.info(f"Sending {len(messages_to_send)} news message(s) to {len(chat_ids)} recipient(s)...")
+    for cid in chat_ids:
+        for msg in messages_to_send:
+            try:
+                send_telegram_message(cid, msg)
+                sent_texts.append(msg)
+            except Exception as e:
+                logger.error(f"Failed to send news message to chat {cid}: {e}")
+
+    return len(results), query, sent_texts
+
 
 
 def main() -> None:

@@ -156,6 +156,49 @@ def get_admin_user_ids() -> list[int]:
     return list(set(admin_ids))
 
 
+def get_eligible_user_ids() -> list[int]:
+    """
+    Retrieves all Telegram user IDs of active eligible users from Supabase for this bot (BOT_NAME = "insights").
+    Merges status from 'user_bot_access' and 'allowed_users', falling back to environment variables.
+    Returns a list of unique integer user IDs.
+    """
+    eligible_ids = set()
+    client = get_supabase_client()
+    if client:
+        # 1. Query user_bot_access for active users for this bot
+        try:
+            access_resp = client.table("user_bot_access").select("user_id").eq("bot_name", BOT_NAME).eq("is_active", True).execute()
+            if access_resp.data:
+                for row in access_resp.data:
+                    uid = row.get("user_id")
+                    if uid is not None:
+                        eligible_ids.add(int(uid))
+        except Exception as e:
+            logger.warning(f"Could not query 'user_bot_access' for active users: {e}")
+
+        # 2. Query allowed_users for active users, verifying they are not revoked in user_bot_access
+        try:
+            allowed_resp = client.table("allowed_users").select("user_id, is_active").execute()
+            if allowed_resp.data:
+                # Fetch user_bot_access map to check per-bot active override
+                access_check_resp = client.table("user_bot_access").select("user_id, is_active").eq("bot_name", BOT_NAME).execute()
+                access_map = {row["user_id"]: row["is_active"] for row in (access_check_resp.data or [])}
+
+                for u in allowed_resp.data:
+                    uid = u.get("user_id")
+                    if uid is None:
+                        continue
+                    # Check per-bot access status first, fallback to allowed_users.is_active
+                    is_active = access_map.get(uid, u.get("is_active", False))
+                    if is_active:
+                        eligible_ids.add(int(uid))
+        except Exception as e:
+            logger.warning(f"Could not query 'allowed_users' for eligible users: {e}")
+
+    return list(eligible_ids)
+
+
+
 def allow_user(user_id: int, username: str = None, role: str = "regular", email: str = None) -> tuple[bool, str | None]:
     """
     Inserts or updates a user profile in the 'allowed_users' table, and

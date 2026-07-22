@@ -6,23 +6,23 @@ from datetime import datetime, timezone
 
 from src.generate_fact import generate_fact
 from src.send_news import execute_and_send_news
-from src.db import log_request
+from src.db import log_request, get_eligible_user_ids
 from src.telegram_utils import send_telegram_message
 
 logger = logging.getLogger("schedulers")
 
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 def execute_fact_scheduler() -> tuple[int, dict]:
     """
-    Executes the daily fact scheduler: generates a fact, sends it to the default Telegram chat, and logs the request.
+    Executes the daily fact scheduler: generates a fact, sends it to all eligible Telegram users, and logs requests.
     Returns (status_code, response_json).
     """
     start_time = time.time()
     logger.info("Starting execute_fact_scheduler")
 
-    if not TELEGRAM_CHAT_ID:
-        err_msg = "TELEGRAM_CHAT_ID is not set"
+    eligible_user_ids = get_eligible_user_ids()
+    if not eligible_user_ids:
+        err_msg = "No eligible users found for scheduler execution."
         logger.error(err_msg)
         log_request(
             endpoint="fact_scheduler",
@@ -39,40 +39,64 @@ def execute_fact_scheduler() -> tuple[int, dict]:
         header = "<b>🎯 Daily Fact</b>" if insight_type == "fact" else "<b>💡 Daily Quote</b>"
         message = f"{header}\n\n{fact_escaped}\n\n<i>{timestamp}</i>"
 
-        send_telegram_message(int(TELEGRAM_CHAT_ID), message)
+        sent_count = 0
+        failed_count = 0
 
-        log_request(
-            endpoint="fact_scheduler",
-            status="success",
-            chat_id=int(TELEGRAM_CHAT_ID),
-            command="scheduler_run",
-            response_content=message,
-            topic=seed,
-            execution_time_ms=int((time.time() - start_time) * 1000)
-        )
-        return 200, {"ok": True}
+        for chat_id in eligible_user_ids:
+            try:
+                send_telegram_message(chat_id, message)
+                sent_count += 1
+                log_request(
+                    endpoint="fact_scheduler",
+                    status="success",
+                    chat_id=chat_id,
+                    command="scheduler_run",
+                    response_content=message,
+                    topic=seed,
+                    execution_time_ms=int((time.time() - start_time) * 1000)
+                )
+            except Exception as e:
+                failed_count += 1
+                logger.error(f"Failed to send fact to user {chat_id}: {e}")
+                log_request(
+                    endpoint="fact_scheduler",
+                    status="error",
+                    chat_id=chat_id,
+                    command="scheduler_run",
+                    error_message=str(e),
+                    execution_time_ms=int((time.time() - start_time) * 1000)
+                )
+
+        logger.info(f"Fact scheduler complete: sent to {sent_count}/{len(eligible_user_ids)} users (failed: {failed_count}).")
+        return 200, {
+            "ok": True,
+            "sent_count": sent_count,
+            "failed_count": failed_count,
+            "total_eligible": len(eligible_user_ids)
+        }
     except Exception as e:
         logger.exception("Error during daily fact scheduler invocation")
         log_request(
             endpoint="fact_scheduler",
             status="error",
-            chat_id=int(TELEGRAM_CHAT_ID),
             command="scheduler_run",
             error_message=str(e),
             execution_time_ms=int((time.time() - start_time) * 1000)
         )
         return 500, {"error": str(e)}
 
+
 def execute_news_scheduler(query_params: dict) -> tuple[int, dict]:
     """
-    Executes the daily news scheduler: queries Talivy, sends digests to Telegram, and logs the request.
+    Executes the daily news scheduler: queries Talivy, sends digests to all eligible Telegram users, and logs requests.
     Returns (status_code, response_json).
     """
     start_time = time.time()
     logger.info("Starting execute_news_scheduler")
 
-    if not TELEGRAM_CHAT_ID:
-        err_msg = "TELEGRAM_CHAT_ID is not set"
+    eligible_user_ids = get_eligible_user_ids()
+    if not eligible_user_ids:
+        err_msg = "No eligible users found for scheduler execution."
         logger.error(err_msg)
         log_request(
             endpoint="news_scheduler",
@@ -96,7 +120,7 @@ def execute_news_scheduler(query_params: dict) -> tuple[int, dict]:
 
     try:
         count, final_query, sent_texts = execute_and_send_news(
-            chat_id=int(TELEGRAM_CHAT_ID),
+            chat_id=eligible_user_ids,
             query=query,
             limit=limit,
             summary=summary
@@ -104,24 +128,32 @@ def execute_news_scheduler(query_params: dict) -> tuple[int, dict]:
         response_content = "\n\n---\n\n".join(sent_texts)
         mode = "summary" if summary else "batch"
 
-        log_request(
-            endpoint="news_scheduler",
-            status="success",
-            chat_id=int(TELEGRAM_CHAT_ID),
-            command=command_desc,
-            response_content=response_content,
-            topic=final_query,
-            execution_time_ms=int((time.time() - start_time) * 1000)
-        )
-        return 200, {"ok": True, "mode": mode, "results": count}
+        for chat_id in eligible_user_ids:
+            log_request(
+                endpoint="news_scheduler",
+                status="success",
+                chat_id=chat_id,
+                command=command_desc,
+                response_content=response_content,
+                topic=final_query,
+                execution_time_ms=int((time.time() - start_time) * 1000)
+            )
+
+        logger.info(f"News scheduler complete: sent to {len(eligible_user_ids)} users.")
+        return 200, {
+            "ok": True,
+            "mode": mode,
+            "results": count,
+            "total_eligible": len(eligible_user_ids)
+        }
     except Exception as e:
         logger.exception("Error during daily news scheduler invocation")
         log_request(
             endpoint="news_scheduler",
             status="error",
-            chat_id=int(TELEGRAM_CHAT_ID),
             command=command_desc,
             error_message=str(e),
             execution_time_ms=int((time.time() - start_time) * 1000)
         )
         return 500, {"error": str(e)}
+
