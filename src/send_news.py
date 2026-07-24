@@ -10,6 +10,8 @@ from datetime import datetime, timezone
 
 from talivy_search import (
     clean_text_for_telegram,
+    clean_news_title,
+    summarize_item_with_llm,
     talivy_search,
     format_search_results,
     parse_talivy_results,
@@ -43,42 +45,19 @@ def send_telegram_message(chat_id: int | str, message: str) -> None:
 
 
 def build_message(query: str, raw_data: dict, limit: int) -> str:
-    summary = format_search_results(query, raw_data, limit=limit)
+    summary = format_search_results(query, raw_data, limit=limit, use_llm=True)
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-    return f"<b>📡 Web update</b>\n\n{summary}\n\n<i>{timestamp}</i>"
+    return f"{summary}\n\n<i>{timestamp}</i>"
 
 
-def build_item_message(query: str, item: dict, index: int, total: int) -> str:
-    title = clean_text_for_telegram(
-        item.get("title") or item.get("headline") or "Untitled"
-    )
-    snippet = clean_text_for_telegram(
-        item.get("content")
-        or item.get("snippet")
-        or item.get("summary")
-        or item.get("description")
-        or item.get("raw_content")
-        or "No description available."
-    )
-    url = item.get("url")
-    if url:
-        url = html.escape(str(url), quote=True)
-
-    lines = [
-        f"<b>📡 Web update ({index}/{total})</b>",
-        f"<b>{title}</b>",
-    ]
-    lines.append(snippet)
-    if url:
-        lines.append(f"<a href=\"{url}\">Read more</a>")
-    return "\n\n".join(lines).strip()
-
-
-def execute_and_send_news(chat_id: int | str | list[int | str], query: str | None = None, limit: int = 3, summary: bool = False):
-    """Fetch news from Talivy and send to Telegram (either as a single summary or batch messages).
+def execute_and_send_news(chat_id: int | str | list[int | str], query: str | None = None, limit: int = 3, summary: bool = True):
+    """Fetch news from Talivy and send to Telegram as a unified bulleted digest.
 
     Args:
         chat_id: Single chat ID or a list of chat IDs.
+        query: Optional search query string.
+        limit: Max results count.
+        summary: Retained for backward compatibility.
 
     Returns:
         tuple: (count of news results sent, final search query used, list of message texts sent)
@@ -94,20 +73,14 @@ def execute_and_send_news(chat_id: int | str | list[int | str], query: str | Non
             query = "world news at a glance today"
 
     logger.info(f"Searching Talivy for: {query}")
-    raw_data = talivy_search(query, limit=limit)
+    raw_data = talivy_search(query, limit=limit, topic="news", search_depth="advanced")
     results = parse_talivy_results(raw_data)
 
-    messages_to_send = []
-    if summary or not results:
-        message = build_message(query, raw_data, limit=limit)
-        messages_to_send.append(message)
-    else:
-        count = min(limit, len(results))
-        for index, item in enumerate(results[:count], start=1):
-            messages_to_send.append(build_item_message(query, item, index, count))
+    message = build_message(query, raw_data, limit=limit)
+    messages_to_send = [message]
 
     sent_texts = []
-    logger.info(f"Sending {len(messages_to_send)} news message(s) to {len(chat_ids)} recipient(s)...")
+    logger.info(f"Sending news digest message to {len(chat_ids)} recipient(s)...")
     for cid in chat_ids:
         for msg in messages_to_send:
             try:
@@ -119,19 +92,12 @@ def execute_and_send_news(chat_id: int | str | list[int | str], query: str | Non
     return len(results), query, sent_texts
 
 
-
 def main() -> None:
     parser = argparse.ArgumentParser(description="Send Talivy web search results to Telegram.")
     parser.add_argument("--query", default=None, help="Search query to send to Telegram (defaults to a dynamic LLM-generated query)")
     parser.add_argument("--limit", type=int, default=3, help="Number of top results to include")
-    parser.add_argument(
-        "--summary",
-        action="store_true",
-        help="Send a single summary message instead of individual result messages.",
-    )
     args = parser.parse_args()
 
-    # If running as command line, configure root logger to output to stdout
     logging.basicConfig(
         level=logging.INFO,
         format='%(asctime)s [%(levelname)s] %(name)s: %(message)s'
@@ -145,7 +111,6 @@ def main() -> None:
         chat_id=telegram_chat_id,
         query=args.query,
         limit=args.limit,
-        summary=args.summary,
     )
     logger.info("Done!")
 

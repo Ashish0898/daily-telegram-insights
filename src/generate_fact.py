@@ -149,14 +149,16 @@ def generate_dynamic_news_query() -> str:
         "artificial intelligence", "space exploration", "renewable energy",
         "marine biology", "archaeological discoveries", "medical breakthroughs",
         "quantum computing", "fusion energy", "consumer tech innovations",
-        "paleontology", "astrophysics", "robotics"
+        "paleontology", "astrophysics", "robotics", "global financial markets",
+        "geopolitics", "international conflicts", "civil protests and social movements",
+        "global diplomacy", "energy markets", "climate policy"
     ]
     selected_cat = random.choice(categories)
 
     current_date = datetime.now(timezone.utc).strftime("%B %Y")
     user_content = (
         f"The current date is {current_date}.\n"
-        f"Generate a short (3-6 words) search query to find the latest, most interesting news, "
+        f"Generate a short (3-6 words) search query to find the latest, trending, most interesting news, "
         f"discoveries, or breakthroughs in the field of: '{selected_cat}'.\n\n"
         f"Do NOT include any punctuation, quotes, or conversational text. Return ONLY the search query string itself. "
         f"Example output: 'JWST new galaxy discoveries' or 'solid state battery breakthroughs'."
