@@ -1,31 +1,14 @@
 #!/usr/bin/env python3
-"""Generate a random fact using GitHub LLM and send to Telegram."""
+"""Generate a random fact or philosophical quote using configured LLM API."""
 
-import os
-import requests
-import json
 import random
 import logging
-from datetime import datetime,timezone
+from datetime import datetime, timezone
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s'
-)
+from src.config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, TELEGRAM_API_URL
+from src.llm_client import generate_llm_response
+
 logger = logging.getLogger("generate_fact")
-
-# GitHub LLM API config
-GITHUB_ENDPOINT = "https://models.github.ai/inference"
-GITHUB_TOKEN = os.getenv("GITHUB_TOKEN")
-MODEL_NAME = "openai/gpt-4.1-nano"
-
-# Telegram config
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
-
-TELEGRAM_API = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
-
 
 FACT_SEEDS = [
     "ancient shipwrecks", "deep-sea biology", "weird medieval laws", "unusual geography",
@@ -63,16 +46,9 @@ EXCLUDE_CLICHES = (
 )
 
 
-def generate_fact(return_topic=False):
-    """Generate a random fact or quote using GitHub LLM API."""
-    headers = {
-        "Content-Type": "application/json",
-    }
-
-    # Randomize parameters for each call to increase diversity
+def generate_fact(return_topic: bool = False):
+    """Generate a random fact or quote using the LLM client wrapper."""
     temperature = random.uniform(0.7, 1.5)
-
-    # Randomly choose between fact and quote
     insight_type = random.choice(["fact", "quote"])
 
     if insight_type == "fact":
@@ -100,106 +76,28 @@ def generate_fact(return_topic=False):
             f"This quote reminds us to remain humble and open-minded in our pursuit of knowledge."
         )
 
-    payload = {
-        "messages": [
-            {
-                "role": "system",
-                "content": system_content,
-            },
-            {
-                "role": "user",
-                "content": user_content,
-            },
-        ],
-        "temperature": temperature,
-        "model": MODEL_NAME,
-    }
+    messages = [
+        {"role": "system", "content": system_content},
+        {"role": "user", "content": user_content},
+    ]
 
     try:
-        logger.info(f"Calling GitHub LLM API ({insight_type}) (model: {MODEL_NAME}, temperature: {temperature:.2f})")
-        response = requests.post(
-            f"{GITHUB_ENDPOINT}/chat/completions",
-            headers={**headers, "Authorization": f"Bearer {GITHUB_TOKEN}"},
-            json=payload,
-            timeout=30,
-        )
-        response.raise_for_status()
-        data = response.json()
-        content = data["choices"][0]["message"]["content"].strip()
+        content = generate_llm_response(messages, temperature=temperature)
         if return_topic:
             return content, seed, insight_type
         return content, insight_type
     except Exception as e:
-        logger.error(f"Error calling GitHub LLM API: {e}")
+        logger.error(f"Error generating fact/quote with LLM: {e}")
         raise
 
 
-def generate_dynamic_news_query() -> str:
-    """Generate a dynamic, interesting news search query using GitHub LLM API."""
-    if not GITHUB_TOKEN:
-        logger.warning("GITHUB_TOKEN not set, returning fallback query.")
-        return "world news at a glance today"
-
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {GITHUB_TOKEN}"
-    }
-
-    categories = [
-        "artificial intelligence", "space exploration", "renewable energy",
-        "marine biology", "archaeological discoveries", "medical breakthroughs",
-        "quantum computing", "fusion energy", "consumer tech innovations",
-        "paleontology", "astrophysics", "robotics", "global financial markets",
-        "geopolitics", "international conflicts", "civil protests and social movements",
-        "global diplomacy", "energy markets", "climate policy"
-    ]
-    selected_cat = random.choice(categories)
-
-    current_date = datetime.now(timezone.utc).strftime("%B %Y")
-    user_content = (
-        f"The current date is {current_date}.\n"
-        f"Generate a short (3-6 words) search query to find the latest, trending, most interesting news, "
-        f"discoveries, or breakthroughs in the field of: '{selected_cat}'.\n\n"
-        f"Do NOT include any punctuation, quotes, or conversational text. Return ONLY the search query string itself. "
-        f"Example output: 'JWST new galaxy discoveries' or 'solid state battery breakthroughs'."
-    )
-
-    payload = {
-        "messages": [
-            {
-                "role": "system",
-                "content": "You are a concise search query generator. You output only the raw search query string.",
-            },
-            {
-                "role": "user",
-                "content": user_content,
-            },
-        ],
-        "temperature": 0.9,
-        "model": MODEL_NAME,
-    }
-
-    try:
-        logger.info(f"Calling GitHub LLM API for dynamic news query in category: '{selected_cat}'")
-        response = requests.post(
-            f"{GITHUB_ENDPOINT}/chat/completions",
-            headers=headers,
-            json=payload,
-            timeout=30,
-        )
-        response.raise_for_status()
-        data = response.json()
-        query = data["choices"][0]["message"]["content"].strip()
-        query = query.strip('\'"`.?! ')
-        logger.info(f"Generated dynamic news query: '{query}'")
-        return query or "world news at a glance today"
-    except Exception as e:
-        logger.error(f"Error calling GitHub LLM API for news query: {e}")
-        return "world news at a glance today"
+# Import and expose generate_dynamic_news_query for backward compatibility
+from src.send_news import generate_dynamic_news_query  # noqa: F401, E402
 
 
-def send_telegram_message(message):
-    """Send message to Telegram."""
+def send_telegram_message(message: str) -> bool:
+    """Send message to Telegram using configured bot token and chat ID."""
+    import requests
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
         raise ValueError("TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID must be set in environment variables.")
 
@@ -209,28 +107,19 @@ def send_telegram_message(message):
         "parse_mode": "HTML",
     }
 
-    response = requests.post(TELEGRAM_API, json=payload, timeout=10)
-    try:
-        response.raise_for_status()
-        logger.info("Message sent successfully to Telegram")
-        return True
-    except requests.HTTPError as e:
-        error_body = response.text
-        logger.error(f"Error sending to Telegram: {e}, response body: {error_body}")
-        raise
+    response = requests.post(TELEGRAM_API_URL, json=payload, timeout=15)
+    response.raise_for_status()
+    logger.info("Message sent successfully to Telegram")
+    return True
 
 
 def main():
     """Main function: generate fact or quote and send to Telegram."""
     try:
-        if not GITHUB_TOKEN:
-            raise ValueError("GITHUB_TOKEN is not set")
-
         logger.info("Generating random fact or quote...")
         content, insight_type = generate_fact()
         logger.info(f"Insight generated (type: {insight_type}): {content}")
 
-        # Format message with emoji and title
         timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
         header = "<b>🎯 Daily Fact</b>" if insight_type == "fact" else "<b>💡 Daily Quote</b>"
         message = f"{header}\n\n{content}\n\n<i>{timestamp}</i>"
@@ -238,9 +127,8 @@ def main():
         logger.info("Sending to Telegram...")
         send_telegram_message(message)
         logger.info("Done!")
-
     except Exception as e:
-        logger.error(f"Failed to complete workflow: {e}")
+        logger.error(f"Failed to complete fact generation workflow: {e}")
         exit(1)
 
 

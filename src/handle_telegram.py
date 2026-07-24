@@ -4,12 +4,14 @@
 import json
 import os
 import requests
+import logging
 from datetime import datetime, timezone
 
-from generate_fact import generate_fact
+from src.config import TELEGRAM_BOT_TOKEN, TELEGRAM_API_URL
+from src.generate_fact import generate_fact
+from src.send_news import execute_and_send_news
 
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-TELEGRAM_API = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+logger = logging.getLogger("handle_telegram")
 
 
 def load_event_payload() -> dict:
@@ -23,9 +25,9 @@ def load_event_payload() -> dict:
     return event.get("client_payload", {})
 
 
-def send_telegram_message(chat_id: int, text: str) -> None:
+def send_telegram_message(chat_id: int | str, text: str) -> None:
     if not TELEGRAM_BOT_TOKEN:
-        raise ValueError("TELEGRAM_BOT_TOKEN must be set")
+        raise ValueError("TELEGRAM_BOT_TOKEN must be set in environment variables.")
 
     payload = {
         "chat_id": chat_id,
@@ -34,7 +36,8 @@ def send_telegram_message(chat_id: int, text: str) -> None:
         "disable_web_page_preview": False,
     }
 
-    response = requests.post(TELEGRAM_API, json=payload, timeout=15)
+    api_url = TELEGRAM_API_URL or f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    response = requests.post(api_url, json=payload, timeout=15)
     response.raise_for_status()
 
 
@@ -55,14 +58,13 @@ def build_response(command: str, query: str | None) -> str:
 
 
 def main() -> None:
-    import logging
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s [%(levelname)s] %(name)s: %(message)s'
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
     )
 
-    if not os.getenv("TELEGRAM_BOT_TOKEN"):
-        raise ValueError("TELEGRAM_BOT_TOKEN must be set in GitHub Actions environment")
+    if not TELEGRAM_BOT_TOKEN:
+        raise ValueError("TELEGRAM_BOT_TOKEN must be set in environment")
 
     payload = load_event_payload()
     chat_id = payload.get("chat_id")
@@ -73,8 +75,7 @@ def main() -> None:
     query = payload.get("query")
 
     if command in ("news", "search"):
-        from send_news import execute_and_send_news
-        execute_and_send_news(chat_id, query, limit=3, summary=False)
+        execute_and_send_news(chat_id, query, limit=3)
     else:
         message = build_response(command, query)
         send_telegram_message(chat_id, message)

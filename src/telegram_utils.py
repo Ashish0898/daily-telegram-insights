@@ -1,22 +1,19 @@
-import os
 import re
 import html
 import logging
 import requests
 from datetime import datetime, timezone
 
-from src.generate_fact import generate_fact, generate_dynamic_news_query
+from src.config import TELEGRAM_BOT_TOKEN, TELEGRAM_API_URL
+from src.generate_fact import generate_fact
+from src.send_news import generate_dynamic_news_query
 from src.talivy_search import talivy_search, format_search_results
 
 logger = logging.getLogger("telegram_utils")
 
-TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-TELEGRAM_API = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
 
 def parse_command(text: str) -> dict:
-    """
-    Parses dynamic bot text commands and splits them into a dict payload.
-    """
+    """Parses dynamic bot text commands and splits them into a dict payload."""
     if not text:
         return {"type": "fact", "query": None}
 
@@ -62,10 +59,9 @@ def parse_command(text: str) -> dict:
 
     return {"type": "fact", "query": None}
 
+
 def build_help_message(is_admin: bool = False) -> str:
-    """
-    Builds the standard HTML formatted /help info text.
-    """
+    """Builds the standard HTML formatted /help info text."""
     msg = (
         "Hello! 🤖\n\n"
         "Use /fact to receive a new random fact.\n"
@@ -82,10 +78,9 @@ def build_help_message(is_admin: bool = False) -> str:
         )
     return msg
 
+
 def get_response_text(cmd: dict, is_admin: bool = False) -> tuple:
-    """
-    Retrieves the formatted response string and its resolved topic/seed for logging.
-    """
+    """Retrieves the formatted response string and its resolved topic/seed for logging."""
     cmd_type = cmd["type"]
     query = cmd["query"]
 
@@ -111,12 +106,11 @@ def get_response_text(cmd: dict, is_admin: bool = False) -> tuple:
     except Exception as e:
         return f"Error performing search for '{search_query}': {str(e)}", search_query
 
-def send_telegram_message(chat_id: int, text: str) -> None:
-    """
-    Sends an HTML formatted message directly to a Telegram chat ID.
-    """
+
+def send_telegram_message(chat_id: int | str, text: str) -> None:
+    """Sends an HTML formatted message directly to a Telegram chat ID."""
     if not TELEGRAM_BOT_TOKEN:
-        raise ValueError("TELEGRAM_BOT_TOKEN must be set")
+        raise ValueError("TELEGRAM_BOT_TOKEN must be set in environment variables.")
 
     payload = {
         "chat_id": chat_id,
@@ -125,7 +119,8 @@ def send_telegram_message(chat_id: int, text: str) -> None:
         "disable_web_page_preview": False,
     }
 
-    response = requests.post(TELEGRAM_API, json=payload, timeout=15)
+    api_url = TELEGRAM_API_URL or f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
+    response = requests.post(api_url, json=payload, timeout=15)
     try:
         response.raise_for_status()
     except requests.HTTPError:
