@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Unified LLM Client class with explicit initialization and invocation methods."""
+"""Unified LLM Client class with automatic provider fallback support."""
 
 import logging
 import requests
@@ -17,7 +17,7 @@ logger = logging.getLogger("llm_client")
 
 
 class LLMClient:
-    """LLM API Client separating credential initialization from chat invocation."""
+    """LLM API Client with automatic fallback across Gemini, Groq, OpenRouter, and OpenAI."""
 
     def __init__(
         self,
@@ -25,42 +25,76 @@ class LLMClient:
         token: str | None = None,
         default_model: str | None = None,
     ):
-        """Method 1: Initialization - resolves provider endpoint, token, and default model."""
-        self.endpoint, self.token, self.default_model = self._resolve_credentials(
-            endpoint, token, default_model
-        )
+        """Initialize provider chain based on available credentials."""
+        self.providers = self._build_provider_chain(endpoint, token, default_model)
+        if not self.providers:
+            raise ValueError(
+                "No LLM authorization token found (GEMINI_API_KEY, LLM_TOKEN, GROQ_API_KEY, OPENROUTER_API_KEY, or OPENAI_API_KEY must be set)."
+            )
+        self.primary = self.providers[0]
+        self.endpoint = self.primary["endpoint"]
+        self.token = self.primary["token"]
+        self.default_model = self.primary["model"]
         logger.info(
-            f"LLMClient initialized: endpoint='{self.endpoint}', default_model='{self.default_model}'"
+            f"LLMClient initialized with {len(self.providers)} provider(s). Primary: '{self.primary['name']}' ({self.default_model})"
         )
 
-    def _resolve_credentials(self, endpoint: str | None, token: str | None, default_model: str | None):
-        """Determine target endpoint, authorization token, and model from configuration."""
-        if token or GEMINI_API_KEY or LLM_TOKEN:
-            resolved_token = token or GEMINI_API_KEY or LLM_TOKEN
-            raw_endpoint = endpoint or LLM_ENDPOINT or "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+    def _build_provider_chain(
+        self, endpoint: str | None, token: str | None, default_model: str | None
+    ) -> list[dict]:
+        """Build ordered list of provider settings for execution and fallback."""
+        chain = []
+
+        # Primary Provider (Gemini / Custom LLM_TOKEN)
+        gemini_token = token or GEMINI_API_KEY or LLM_TOKEN
+        if gemini_token:
+            raw_endpoint = (
+                endpoint
+                or LLM_ENDPOINT
+                or "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+            )
             if "interactions" in raw_endpoint or "models.github.ai" in raw_endpoint:
-                if GEMINI_API_KEY or resolved_token.startswith("AIza"):
-                    raw_endpoint = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+                if GEMINI_API_KEY or gemini_token.startswith("AIza"):
+                    raw_endpoint = (
+                        "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+                    )
             resolved_endpoint = raw_endpoint.rstrip("/")
             resolved_model = default_model or LLM_MODEL or "gemini-3.6-flash"
-        elif OPENAI_API_KEY:
-            resolved_endpoint = "https://api.openai.com/v1/chat/completions"
-            resolved_token = OPENAI_API_KEY
-            resolved_model = default_model or "gpt-4o-mini"
-        elif OPENROUTER_API_KEY:
-            resolved_endpoint = "https://openrouter.ai/api/v1/chat/completions"
-            resolved_token = OPENROUTER_API_KEY
-            resolved_model = default_model or "openai/gpt-4o-mini"
-        elif GROQ_API_KEY:
-            resolved_endpoint = "https://api.groq.com/openai/v1/chat/completions"
-            resolved_token = GROQ_API_KEY
-            resolved_model = default_model or "llama-3.3-70b-versatile"
-        else:
-            raise ValueError(
-                "No LLM authorization token found (GEMINI_API_KEY, LLM_TOKEN, OPENAI_API_KEY, OPENROUTER_API_KEY, or GROQ_API_KEY must be set)."
-            )
+            chain.append({
+                "name": "Gemini",
+                "endpoint": resolved_endpoint,
+                "token": gemini_token,
+                "model": resolved_model,
+            })
 
-        return resolved_endpoint, resolved_token, resolved_model
+        # Fallback Provider: Groq
+        if GROQ_API_KEY and (not chain or chain[0]["token"] != GROQ_API_KEY):
+            chain.append({
+                "name": "Groq",
+                "endpoint": "https://api.groq.com/openai/v1/chat/completions",
+                "token": GROQ_API_KEY,
+                "model": "llama-3.3-70b-versatile",
+            })
+
+        # Fallback Provider: OpenRouter
+        if OPENROUTER_API_KEY and (not chain or chain[0]["token"] != OPENROUTER_API_KEY):
+            chain.append({
+                "name": "OpenRouter",
+                "endpoint": "https://openrouter.ai/api/v1/chat/completions",
+                "token": OPENROUTER_API_KEY,
+                "model": "openai/gpt-4o-mini",
+            })
+
+        # Fallback Provider: OpenAI
+        if OPENAI_API_KEY and (not chain or chain[0]["token"] != OPENAI_API_KEY):
+            chain.append({
+                "name": "OpenAI",
+                "endpoint": "https://api.openai.com/v1/chat/completions",
+                "token": OPENAI_API_KEY,
+                "model": "gpt-4o-mini",
+            })
+
+        return chain
 
     def invoke(
         self,
@@ -70,38 +104,53 @@ class LLMClient:
         model: str | None = None,
         timeout: int = 30,
     ) -> str:
-        """Method 2: Invocation - executes chat completion HTTP call using initialized settings."""
-        target_model = model or self.default_model
+        """Execute chat completion with automatic fallback to secondary providers upon error/rate-limit."""
+        errors = []
 
-        payload = {
-            "model": target_model,
-            "messages": messages,
-            "temperature": temperature,
-        }
-        if max_tokens:
-            payload["max_tokens"] = max_tokens
+        for index, provider in enumerate(self.providers):
+            p_name = provider["name"]
+            p_endpoint = provider["endpoint"]
+            p_token = provider["token"]
+            target_model = model if (model and index == 0) else provider["model"]
 
-        headers = {
-            "Authorization": f"Bearer {self.token}",
-            "Content-Type": "application/json",
-        }
+            payload = {
+                "model": target_model,
+                "messages": messages,
+                "temperature": temperature,
+            }
+            if max_tokens:
+                payload["max_tokens"] = max_tokens
 
-        logger.info(
-            f"Invoking LLM API ({self.endpoint}) with model '{target_model}' (temp: {temperature:.2f})"
-        )
-        response = requests.post(self.endpoint, json=payload, headers=headers, timeout=timeout)
-        try:
-            response.raise_for_status()
-        except requests.HTTPError as e:
-            logger.error(f"LLM API invocation failed with status {response.status_code}: {response.text}")
-            raise e
+            headers = {
+                "Authorization": f"Bearer {p_token}",
+                "Content-Type": "application/json",
+            }
 
-        data = response.json()
-        if "choices" in data and len(data["choices"]) > 0:
-            content = data["choices"][0]["message"]["content"].strip()
-            return content
-        else:
-            raise ValueError(f"Invalid response structure from LLM API: {data}")
+            try:
+                logger.info(
+                    f"Invoking LLM provider '{p_name}' ({p_endpoint}) with model '{target_model}' (temp: {temperature:.2f})"
+                )
+                response = requests.post(p_endpoint, json=payload, headers=headers, timeout=timeout)
+                response.raise_for_status()
+
+                data = response.json()
+                if "choices" in data and len(data["choices"]) > 0:
+                    content = data["choices"][0]["message"]["content"].strip()
+                    if index > 0:
+                        logger.warning(
+                            f"LLM call succeeded using fallback provider '{p_name}' after earlier failures."
+                        )
+                    return content
+                else:
+                    raise ValueError(f"Invalid response structure from provider '{p_name}': {data}")
+
+            except Exception as e:
+                err_msg = f"Provider '{p_name}' ({target_model}) failed: {e}"
+                logger.warning(err_msg)
+                errors.append(err_msg)
+
+        all_errors = "; ".join(errors)
+        raise RuntimeError(f"All configured LLM providers failed. Errors: {all_errors}")
 
 
 # Singleton client instance
