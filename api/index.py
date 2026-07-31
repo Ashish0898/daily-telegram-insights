@@ -90,11 +90,22 @@ class handler(BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(html_err.encode('utf-8'))
 
-    def do_POST(self):
+    def resolve_path(self) -> str:
         parsed_url = urlparse(self.path)
         path = parsed_url.path.rstrip('/')
+        query_params = parse_qs(parsed_url.query)
 
-        if path in ('/api/telegram', '/api/index', '/api', ''):
+        if path in ('/api/index.py', '/api/index', '/api', ''):
+            if 'path' in query_params and query_params['path']:
+                subpath = query_params['path'][0].lstrip('/')
+                return f"/api/{subpath}".rstrip('/')
+
+        return path
+
+    def do_POST(self):
+        path = self.resolve_path()
+
+        if path in ('/api/telegram', '/api/index.py', '/api/index', '/api', ''):
             self.handle_telegram_post()
         elif path == '/api/users/allow':
             self.handle_api_allow_user()
@@ -105,7 +116,7 @@ class handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         parsed_url = urlparse(self.path)
-        path = parsed_url.path.rstrip('/')
+        path = self.resolve_path()
 
         if path == '':
             root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
