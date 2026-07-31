@@ -1,10 +1,10 @@
 # Daily Fact & News Telegram Bot
 
-Automatically send a daily random fact and dynamic web news updates to Telegram using GitHub LLM API and Talivy Search.
+Automatically send a daily random fact and dynamic web news updates to Telegram using Gemini API and Talivy Search.
 
 ## Features
 
-- 🤖 **Random Facts**: Generates unique, highly interesting facts using GitHub's LLM API (`openai/gpt-4.1-nano`).
+- 🤖 **Random Facts**: Generates unique, highly interesting facts using Gemini API (`gemini-3.6-flash`).
 - 📡 **Dynamic News Digest**: Dynamically generates a fresh news search query every day (e.g., in fields like AI, space, science) using the LLM, then fetches live updates using the Talivy Search API. Fallbacks to `"world news at a glance today"`.
 - 🔒 **Webhook Security Middleware**:
   - **Secret Token Verification**: Authenticates incoming requests from Telegram using a secret webhook token.
@@ -21,7 +21,7 @@ Automatically send a daily random fact and dynamic web news updates to Telegram 
 
 If running facts via GitHub Actions, add these secrets (Settings → Secrets and variables → Actions):
 
-- `GITHUB_TOKEN` - Your GitHub API key for LLM access
+- `GEMINI_API_KEY` - Your Gemini API key for LLM access
 - `TELEGRAM_BOT_TOKEN` - Your Telegram bot token (from @BotFather)
 - `TELEGRAM_CHAT_ID` - Your Telegram chat/user ID
 
@@ -36,7 +36,7 @@ The bot can run as an interactive serverless webhook handler on Vercel.
 Create a Vercel project from this repository and add your environment variables.
 
 #### Core Configuration
-- `GITHUB_TOKEN` - Your GitHub API key for LLM access.
+- `GEMINI_API_KEY` - Your Gemini API key for LLM access.
 - `TELEGRAM_BOT_TOKEN` - Your Telegram bot token (from @BotFather).
 - `TELEGRAM_CHAT_ID` - Your default Telegram chat ID (used for scheduled messages).
 
@@ -92,7 +92,7 @@ To set up request auditing:
 
 To test the LLM fact generation locally:
 ```bash
-export GITHUB_TOKEN="your_key"
+export GEMINI_API_KEY="your_key"
 export TELEGRAM_BOT_TOKEN="your_token"
 export TELEGRAM_CHAT_ID="your_chat_id"
 
@@ -101,7 +101,7 @@ python src/generate_fact.py
 
 To test the news generation locally (uses the dynamic LLM topic query by default, or defaults to world news fallback):
 ```bash
-export GITHUB_TOKEN="your_key"
+export GEMINI_API_KEY="your_key"
 export TALIVY_API_KEY="your_talivy_key"
 export TALIVY_ENDPOINT="https://api.talivy.example/search"
 

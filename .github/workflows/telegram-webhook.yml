@@ -22,6 +22,7 @@ jobs:
 
       - name: Handle Telegram event
         env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TALIVY_API_KEY: ${{ secrets.TALIVY_API_KEY }}

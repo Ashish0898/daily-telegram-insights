@@ -7,6 +7,7 @@ from src.config import (
     LLM_ENDPOINT,
     LLM_TOKEN,
     LLM_MODEL,
+    GEMINI_API_KEY,
     OPENROUTER_API_KEY,
     OPENAI_API_KEY,
     GROQ_API_KEY,
@@ -34,14 +35,14 @@ class LLMClient:
 
     def _resolve_credentials(self, endpoint: str | None, token: str | None, default_model: str | None):
         """Determine target endpoint, authorization token, and model from configuration."""
-        if token or LLM_TOKEN:
-            resolved_token = token or LLM_TOKEN
-            raw_endpoint = endpoint or LLM_ENDPOINT or "https://models.github.ai/inference"
-            resolved_endpoint = (
-                raw_endpoint if raw_endpoint.endswith("/chat/completions")
-                else f"{raw_endpoint.rstrip('/')}/chat/completions"
-            )
-            resolved_model = default_model or LLM_MODEL or "openai/gpt-4.1-nano"
+        if token or GEMINI_API_KEY or LLM_TOKEN:
+            resolved_token = token or GEMINI_API_KEY or LLM_TOKEN
+            raw_endpoint = endpoint or LLM_ENDPOINT or "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+            if "interactions" in raw_endpoint or "models.github.ai" in raw_endpoint:
+                if GEMINI_API_KEY or resolved_token.startswith("AIza"):
+                    raw_endpoint = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+            resolved_endpoint = raw_endpoint.rstrip("/")
+            resolved_model = default_model or LLM_MODEL or "gemini-3.6-flash"
         elif OPENAI_API_KEY:
             resolved_endpoint = "https://api.openai.com/v1/chat/completions"
             resolved_token = OPENAI_API_KEY
@@ -56,7 +57,7 @@ class LLMClient:
             resolved_model = default_model or "llama-3.3-70b-versatile"
         else:
             raise ValueError(
-                "No LLM authorization token found (LLM_TOKEN, OPENAI_API_KEY, OPENROUTER_API_KEY, or GROQ_API_KEY must be set)."
+                "No LLM authorization token found (GEMINI_API_KEY, LLM_TOKEN, OPENAI_API_KEY, OPENROUTER_API_KEY, or GROQ_API_KEY must be set)."
             )
 
         return resolved_endpoint, resolved_token, resolved_model

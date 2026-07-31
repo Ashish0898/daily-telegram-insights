@@ -20,5 +20,5 @@ To configure Talivy, add the following variables to your local [.env](file:///mn
 
 ## 2. Dynamic vs. Static News Queries
 
-- **Dynamic (Default)**: If `NEWS_QUERY` is omitted or empty, the bot invokes the GitHub LLM (`openai/gpt-4.1-nano`) to dynamically generate a new trending topic query each day (e.g., related to quantum computing, marine biology, energy, etc.) and searches Talivy for it.
+- **Dynamic (Default)**: If `NEWS_QUERY` is omitted or empty, the bot invokes the Gemini API (`gemini-3.6-flash`) to dynamically generate a new trending topic query each day (e.g., related to quantum computing, marine biology, energy, etc.) and searches Talivy for it.
 - **Static**: If `NEWS_QUERY` is set, the bot will bypass LLM generation and search Talivy for that exact phrase every time.

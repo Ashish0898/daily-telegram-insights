@@ -11,7 +11,7 @@ To test endpoints locally, you can start the built-in HTTP server:
 ```bash
 # Set required environment variables
 export TELEGRAM_BOT_TOKEN="your_telegram_bot_token"
-export GITHUB_TOKEN="your_github_token"
+export GEMINI_API_KEY="your_gemini_api_key"
 export TELEGRAM_CHAT_ID="your_telegram_chat_id"
 export TALIVY_API_KEY="your_talivy_key"
 

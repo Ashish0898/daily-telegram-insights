@@ -9,8 +9,8 @@ This repository implements a lightweight Telegram automation project that:
 
 ## Current architecture
 
-- `src/generate_fact.py` - generates a random fact using GitHub LLM
-- `src/send_news.py` - sends Talivy search results to Telegram
+- `src/generate_fact.py` - generates a random fact using Gemini API
+- `src/send_news.py` - sends Talivy search results to Telegram (with dynamic topic generation using Gemini API)
 - `src/talivy_search.py` - Talivy search helper and formatter
 - `src/handle_telegram.py` - GitHub Actions handler for Telegram webhook events
 - `api/telegram.js` - Vercel webhook endpoint to receive Telegram updates and dispatch GitHub events
@@ -25,12 +25,12 @@ This repository implements a lightweight Telegram automation project that:
 
 - Deploy `api/telegram.js` to Vercel
 - Configure Vercel environment variables:
-  - `GITHUB_TOKEN`
+  - `GEMINI_API_KEY`
   - `GITHUB_REPO`
   - `TELEGRAM_BOT_TOKEN`
 - Set Telegram webhook to `https://<vercel-app>.vercel.app/api/telegram`
 - Add GitHub repo secrets:
-  - `GITHUB_TOKEN`
+  - `GEMINI_API_KEY`
   - `TELEGRAM_BOT_TOKEN`
   - `TELEGRAM_CHAT_ID`
   - `TALIVY_API_KEY`

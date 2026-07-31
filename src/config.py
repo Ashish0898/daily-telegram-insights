@@ -25,15 +25,15 @@ if env_path.exists():
                 os.environ[key] = val
 
 # LLM Configuration
-LLM_ENDPOINT = os.getenv("LLM_ENDPOINT") or os.getenv("GITHUB_ENDPOINT") or "https://models.github.ai/inference"
-LLM_TOKEN = os.getenv("LLM_TOKEN") or os.getenv("GITHUB_TOKEN")
-LLM_MODEL = os.getenv("LLM_MODEL") or os.getenv("MODEL_NAME") or "openai/gpt-4.1-nano"
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or os.getenv("GEMINI_KEY")
+LLM_ENDPOINT = os.getenv("LLM_ENDPOINT") or os.getenv("GEMINI_ENDPOINT") or "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+LLM_TOKEN = os.getenv("LLM_TOKEN") or GEMINI_API_KEY or os.getenv("GITHUB_TOKEN")
+LLM_MODEL = os.getenv("LLM_MODEL") or os.getenv("MODEL_NAME") or "gemini-3.6-flash"
 
 # Alternative LLM Provider Keys (for seamless switching)
 OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-GEMINI_KEY = os.getenv("GEMINI_KEY")
 
 # Tavily Search Configuration
 TALIVY_API_KEY = os.getenv("TALIVY_API_KEY")
