@@ -59,7 +59,7 @@ class LLMClient:
                         "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
                     )
             resolved_endpoint = raw_endpoint.rstrip("/")
-            resolved_model = default_model or LLM_MODEL or "gemini-3.6-flash"
+            resolved_model = default_model or LLM_MODEL or "gemini-3.5-flash-lite"
             chain.append({
                 "name": "Gemini",
                 "endpoint": resolved_endpoint,
@@ -73,7 +73,7 @@ class LLMClient:
                 "name": "Groq",
                 "endpoint": "https://api.groq.com/openai/v1/chat/completions",
                 "token": GROQ_API_KEY,
-                "model": "llama-3.3-70b-versatile",
+                "model": "groq/compound-mini",
             })
 
         # Fallback Provider: OpenRouter
@@ -82,7 +82,7 @@ class LLMClient:
                 "name": "OpenRouter",
                 "endpoint": "https://openrouter.ai/api/v1/chat/completions",
                 "token": OPENROUTER_API_KEY,
-                "model": "openai/gpt-4o-mini",
+                "model": "openrouter/auto-beta",
             })
 
         # Fallback Provider: OpenAI
