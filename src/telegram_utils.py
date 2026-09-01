@@ -15,7 +15,7 @@ logger = logging.getLogger("telegram_utils")
 def parse_command(text: str) -> dict:
     """Parses dynamic bot text commands and splits them into a dict payload."""
     if not text:
-        return {"type": "insight", "query": None, "mode": None}
+        return {"type": "help", "query": None, "mode": None}
 
     trimmed = text.strip()
     normalized = trimmed.lower()
@@ -79,7 +79,7 @@ def parse_command(text: str) -> dict:
     if normalized.startswith("/users"):
         return {"type": "users", "query": None, "mode": None}
 
-    return {"type": "insight", "query": None, "mode": None}
+    return {"type": "help", "query": None, "mode": None}
 
 
 def build_help_message(is_admin: bool = False) -> str:

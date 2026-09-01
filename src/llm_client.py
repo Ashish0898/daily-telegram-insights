@@ -103,7 +103,7 @@ class LLMClient:
 
         # 1. Primary Chain: Gemini Direct API
         if self.gemini_key:
-            for gemini_model in [target_model, "gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-3.6-flash"]:
+            for gemini_model in ["gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-3.6-flash",target_model]:
                 try:
                     logger.info(f"Invoking Gemini Direct with model '{gemini_model}'")
                     return _call_gemini_direct(self.gemini_key, gemini_model, messages, temperature, timeout=timeout)
