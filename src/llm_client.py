@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Unified LLM Client class with automatic provider fallback support."""
+"""Unified LLM Client class with cascade multi-provider fallback support across Gemini, OpenRouter, Groq, and OpenAI."""
 
 import logging
 import requests
@@ -16,8 +16,69 @@ from src.config import (
 logger = logging.getLogger("llm_client")
 
 
+def _call_gemini_direct(api_key: str, model: str, messages: list[dict], temperature: float, timeout: int = 15) -> str:
+    """Call Google Gemini generateContent API directly."""
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
+    headers = {"Content-Type": "application/json"}
+
+    # Extract system instruction and user messages
+    system_text = ""
+    contents = []
+    for msg in messages:
+        role = msg.get("role", "user")
+        content = msg.get("content", "")
+        if role == "system":
+            system_text += content + "\n"
+        elif role == "assistant":
+            contents.append({"role": "model", "parts": [{"text": content}]})
+        else:
+            contents.append({"role": "user", "parts": [{"text": content}]})
+
+    payload = {
+        "contents": contents,
+        "generationConfig": {
+            "temperature": temperature
+        }
+    }
+    if system_text.strip():
+        payload["systemInstruction"] = {
+            "parts": [{"text": system_text.strip()}]
+        }
+
+    response = requests.post(url, headers=headers, json=payload, timeout=timeout)
+    response.raise_for_status()
+    result_json = response.json()
+
+    candidates = result_json.get("candidates", [])
+    if not candidates:
+        raise ValueError("No candidates returned from Gemini API")
+    parts = candidates[0].get("content", {}).get("parts", [])
+    if not parts:
+        raise ValueError("No content parts returned from Gemini API")
+    return parts[0].get("text", "").strip()
+
+
+def _call_openai_compatible(endpoint: str, api_key: str, model: str, messages: list[dict], temperature: float, provider_name: str = "LLM", timeout: int = 15) -> str:
+    """Call an OpenAI-compatible endpoint (OpenRouter, Groq, OpenAI)."""
+    url = endpoint if endpoint.startswith("http") else f"{endpoint}/chat/completions"
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {api_key}"
+    }
+    payload = {
+        "model": model,
+        "messages": messages,
+        "temperature": temperature
+    }
+    logger.info(f"Invoking {provider_name} API with model '{model}'")
+    response = requests.post(url, headers=headers, json=payload, timeout=timeout)
+    response.raise_for_status()
+    result_json = response.json()
+    return result_json["choices"][0]["message"]["content"].strip()
+
+
 class LLMClient:
-    """LLM API Client with automatic fallback across Gemini, Groq, OpenRouter, and OpenAI."""
+    """LLM API Client with cascade fallback across Gemini Direct, OpenRouter, Groq, and OpenAI."""
 
     def __init__(
         self,
@@ -25,76 +86,8 @@ class LLMClient:
         token: str | None = None,
         default_model: str | None = None,
     ):
-        """Initialize provider chain based on available credentials."""
-        self.providers = self._build_provider_chain(endpoint, token, default_model)
-        if not self.providers:
-            raise ValueError(
-                "No LLM authorization token found (GEMINI_API_KEY, LLM_TOKEN, GROQ_API_KEY, OPENROUTER_API_KEY, or OPENAI_API_KEY must be set)."
-            )
-        self.primary = self.providers[0]
-        self.endpoint = self.primary["endpoint"]
-        self.token = self.primary["token"]
-        self.default_model = self.primary["model"]
-        logger.info(
-            f"LLMClient initialized with {len(self.providers)} provider(s). Primary: '{self.primary['name']}' ({self.default_model})"
-        )
-
-    def _build_provider_chain(
-        self, endpoint: str | None, token: str | None, default_model: str | None
-    ) -> list[dict]:
-        """Build ordered list of provider settings for execution and fallback."""
-        chain = []
-
-        # Primary Provider (Gemini / Custom LLM_TOKEN)
-        gemini_token = token or GEMINI_API_KEY or LLM_TOKEN
-        if gemini_token:
-            raw_endpoint = (
-                endpoint
-                or LLM_ENDPOINT
-                or "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
-            )
-            if "interactions" in raw_endpoint or "models.github.ai" in raw_endpoint:
-                if GEMINI_API_KEY or gemini_token.startswith("AIza"):
-                    raw_endpoint = (
-                        "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
-                    )
-            resolved_endpoint = raw_endpoint.rstrip("/")
-            resolved_model = default_model or LLM_MODEL or "gemini-3.5-flash-lite"
-            chain.append({
-                "name": "Gemini",
-                "endpoint": resolved_endpoint,
-                "token": gemini_token,
-                "model": resolved_model,
-            })
-
-        # Fallback Provider: Groq
-        if GROQ_API_KEY and (not chain or chain[0]["token"] != GROQ_API_KEY):
-            chain.append({
-                "name": "Groq",
-                "endpoint": "https://api.groq.com/openai/v1/chat/completions",
-                "token": GROQ_API_KEY,
-                "model": "groq/compound-mini",
-            })
-
-        # Fallback Provider: OpenRouter
-        if OPENROUTER_API_KEY and (not chain or chain[0]["token"] != OPENROUTER_API_KEY):
-            chain.append({
-                "name": "OpenRouter",
-                "endpoint": "https://openrouter.ai/api/v1/chat/completions",
-                "token": OPENROUTER_API_KEY,
-                "model": "openrouter/auto-beta",
-            })
-
-        # Fallback Provider: OpenAI
-        if OPENAI_API_KEY and (not chain or chain[0]["token"] != OPENAI_API_KEY):
-            chain.append({
-                "name": "OpenAI",
-                "endpoint": "https://api.openai.com/v1/chat/completions",
-                "token": OPENAI_API_KEY,
-                "model": "gpt-4o-mini",
-            })
-
-        return chain
+        self.gemini_key = token or GEMINI_API_KEY or LLM_TOKEN
+        self.default_model = default_model or LLM_MODEL or "gemini-3.5-flash-lite"
 
     def invoke(
         self,
@@ -102,58 +95,47 @@ class LLMClient:
         temperature: float = 0.7,
         max_tokens: int | None = None,
         model: str | None = None,
-        timeout: int = 30,
+        timeout: int = 15,
     ) -> str:
-        """Execute chat completion with automatic fallback to secondary providers upon error/rate-limit."""
+        """Execute chat completion with automatic cascade fallback."""
+        target_model = model or self.default_model
         errors = []
 
-        for index, provider in enumerate(self.providers):
-            p_name = provider["name"]
-            p_endpoint = provider["endpoint"]
-            p_token = provider["token"]
-            target_model = model if (model and index == 0) else provider["model"]
+        # 1. Primary Chain: Gemini Direct API
+        if self.gemini_key:
+            for gemini_model in [target_model, "gemini-3.5-flash-lite", "gemini-3.5-flash", "gemini-3.6-flash"]:
+                try:
+                    logger.info(f"Invoking Gemini Direct with model '{gemini_model}'")
+                    return _call_gemini_direct(self.gemini_key, gemini_model, messages, temperature, timeout=timeout)
+                except Exception as e:
+                    err_msg = f"Gemini Direct ({gemini_model}) failed: {e}"
+                    logger.warning(err_msg)
+                    errors.append(err_msg)
 
-            payload = {
-                "model": target_model,
-                "messages": messages,
-                "temperature": temperature,
-            }
-            if max_tokens:
-                payload["max_tokens"] = max_tokens
+        # 2. Fallback Chain: OpenRouter
+        if OPENROUTER_API_KEY:
+            for or_model in ["google/gemini-2.5-flash-lite", "nvidia/nemotron-3.5-lightning:free", "openrouter/auto"]:
+                try:
+                    return _call_openai_compatible("https://openrouter.ai/api/v1/chat/completions", OPENROUTER_API_KEY, or_model, messages, temperature, "OpenRouter", timeout=timeout)
+                except Exception as e:
+                    err_msg = f"OpenRouter ({or_model}) failed: {e}"
+                    logger.warning(err_msg)
+                    errors.append(err_msg)
 
-            headers = {
-                "Authorization": f"Bearer {p_token}",
-                "Content-Type": "application/json",
-            }
-
-            try:
-                logger.info(
-                    f"Invoking LLM provider '{p_name}' ({p_endpoint}) with model '{target_model}' (temp: {temperature:.2f})"
-                )
-                response = requests.post(p_endpoint, json=payload, headers=headers, timeout=timeout)
-                response.raise_for_status()
-
-                data = response.json()
-                if "choices" in data and len(data["choices"]) > 0:
-                    content = data["choices"][0]["message"]["content"].strip()
-                    if index > 0:
-                        logger.warning(
-                            f"LLM call succeeded using fallback provider '{p_name}' after earlier failures."
-                        )
-                    return content
-                else:
-                    raise ValueError(f"Invalid response structure from provider '{p_name}': {data}")
-
-            except Exception as e:
-                err_msg = f"Provider '{p_name}' ({target_model}) failed: {e}"
-                logger.warning(err_msg)
-                errors.append(err_msg)
+        # 3. Fallback Chain: Groq
+        if GROQ_API_KEY:
+            for groq_model in ["groq/compound", "groq/compound-mini", "qwen/qwen3.8-27b"]:
+                try:
+                    return _call_openai_compatible("https://api.groq.com/openai/v1/chat/completions", GROQ_API_KEY, groq_model, messages, temperature, "Groq", timeout=timeout)
+                except Exception as e:
+                    err_msg = f"Groq ({groq_model}) failed: {e}"
+                    logger.warning(err_msg)
+                    errors.append(err_msg)
 
         all_errors = "; ".join(errors)
         raise RuntimeError(f"All configured LLM providers failed. Errors: {all_errors}")
 
 
-# Singleton client instance
 _default_client: LLMClient | None = None
 
 
@@ -170,7 +152,7 @@ def generate_llm_response(
     temperature: float = 0.7,
     max_tokens: int | None = None,
     model: str | None = None,
-    timeout: int = 30,
+    timeout: int = 15,
 ) -> str:
     """Functional wrapper invoking the initialized default LLMClient."""
     client = get_llm_client()

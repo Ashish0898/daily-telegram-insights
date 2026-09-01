@@ -33,11 +33,9 @@ def execute_fact_scheduler() -> tuple[int, dict]:
         return 500, {"error": err_msg}
 
     try:
-        fact, seed, insight_type = generate_fact(return_topic=True)
-        fact_escaped = html.escape(fact, quote=False)
+        insight_content, seed, insight_type = generate_fact(return_topic=True)
         timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-        header = "<b>🎯 Daily Fact</b>" if insight_type == "fact" else "<b>💡 Daily Quote</b>"
-        message = f"{header}\n\n{fact_escaped}\n\n<i>{timestamp}</i>"
+        message = f"{insight_content}\n\n<i>{timestamp}</i>"
 
         sent_count = 0
         failed_count = 0

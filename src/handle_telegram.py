@@ -45,16 +45,15 @@ def build_response(command: str, query: str | None) -> str:
     if command == "help":
         return (
             "Hello! 🤖\n\n"
-            "Use /fact to receive a new random fact.\n"
+            "Use /insight to receive an energizing cognitive insight (mental model, paradox, bias, etc.).\n"
             "Use /news to get a dynamic daily news digest, or /news <query> for a specific topic.\n"
             "Use /search <query> to search Talivy for custom web results.\n"
             "Use /help to show this message again."
         )
 
     content, insight_type = generate_fact()
-    header = "<b>🎯 Daily Fact</b>" if insight_type == "fact" else "<b>💡 Daily Quote</b>"
     timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-    return f"{header}\n\n{content}\n\n<i>{timestamp}</i>"
+    return f"{content}\n\n<i>{timestamp}</i>"
 
 
 def main() -> None:

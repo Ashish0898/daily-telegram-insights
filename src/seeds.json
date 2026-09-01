@@ -1,0 +1,248 @@
+{
+  "mental_models": [
+    {
+      "name": "Chesterton's Fence",
+      "hint": "Never remove a fence, rule, or piece of code until you understand why it was built in the first place."
+    },
+    {
+      "name": "Inversion (Stoic / Jacobi)",
+      "hint": "Instead of asking how to succeed, ask how to avoid obvious failure and invert the problem."
+    },
+    {
+      "name": "Second-Order Thinking",
+      "hint": "Always ask: 'And then what?' considering the downstream secondary and tertiary consequences."
+    },
+    {
+      "name": "First Principles Thinking",
+      "hint": "Boil a problem down to its fundamental truths and reason up from there rather than by analogy."
+    },
+    {
+      "name": "Gall's Law",
+      "hint": "All complex systems that work evolved from simple systems that worked. Designing complex systems from scratch always fails."
+    },
+    {
+      "name": "Lindy Effect",
+      "hint": "The future life expectancy of non-perishable ideas/tools is proportional to their current age."
+    },
+    {
+      "name": "Hanlon's Razor",
+      "hint": "Never attribute to malice that which is adequately explained by carelessness or misunderstanding."
+    },
+    {
+      "name": "Goodhart's Law",
+      "hint": "When a measure becomes a target, it ceases to be a good measure."
+    },
+    {
+      "name": "Occam's Razor",
+      "hint": "Among competing hypotheses, the one with the fewest assumptions is usually the correct one."
+    },
+    {
+      "name": "Circle of Competence",
+      "hint": "Knowing the precise boundary of what you truly understand versus what you only think you understand."
+    },
+    {
+      "name": "Conway's Law",
+      "hint": "Organizations design software architectures that mirror their internal communication structures."
+    },
+    {
+      "name": "Parkinson's Law",
+      "hint": "Work expands so as to fill the time available for its completion."
+    },
+    {
+      "name": "The Map is Not the Territory",
+      "hint": "Models, abstractions, and specs are useful representations, not reality itself."
+    },
+    {
+      "name": "The Cobra Effect",
+      "hint": "When an attempted solution makes the original problem worse through perverse incentives."
+    }
+  ],
+  "cognitive_biases": [
+    {
+      "name": "Survivorship Bias",
+      "hint": "Focusing on visible winners while overlooking the invisible graveyard of failures."
+    },
+    {
+      "name": "Sunk Cost Fallacy",
+      "hint": "Continuing a failing project because you've already invested time, money, or effort."
+    },
+    {
+      "name": "Anchoring Bias",
+      "hint": "Relying too heavily on the first piece of information encountered when making decisions."
+    },
+    {
+      "name": "Dunning-Kruger Effect",
+      "hint": "People with low expertise overestimating their ability, while experts underestimate theirs."
+    },
+    {
+      "name": "Fundamental Attribution Error",
+      "hint": "Blaming others' actions on character flaws while excusing your own as situational."
+    },
+    {
+      "name": "Framing Effect",
+      "hint": "Drawing different conclusions from the exact same data depending on how it is presented."
+    },
+    {
+      "name": "Confirmation Bias",
+      "hint": "Searching for and interpreting information in a way that confirms preexisting beliefs."
+    },
+    {
+      "name": "Status Quo Bias",
+      "hint": "Preferring the current state of affairs over change, even when change offers clear upside."
+    },
+    {
+      "name": "Curse of Knowledge",
+      "hint": "Once you know something deeply, it is nearly impossible to imagine what it's like not to know it."
+    },
+    {
+      "name": "Peak-End Rule",
+      "hint": "Judging an experience almost entirely based on how it felt at its peak and at its end."
+    }
+  ],
+  "paradoxes": [
+    {
+      "name": "Simpson's Paradox",
+      "hint": "A trend appears in several different groups of data but disappears or reverses when the groups are combined."
+    },
+    {
+      "name": "Braess's Paradox",
+      "hint": "Adding capacity to a network can sometimes slow down overall throughput when agents act selfishly."
+    },
+    {
+      "name": "The Monty Hall Problem",
+      "hint": "Why switching doors doubles your chances of winning from 1/3 to 2/3 due to conditional probability."
+    },
+    {
+      "name": "The Birthday Paradox",
+      "hint": "In a room of just 23 people, there is a 50% chance two share the exact same birthday."
+    },
+    {
+      "name": "The Fermi Paradox",
+      "hint": "If the universe is so vast and ancient, where are all the extraterrestrial civilizations?"
+    },
+    {
+      "name": "Ship of Theseus",
+      "hint": "If all parts of an object are replaced over time, does fundamental identity persist?"
+    },
+    {
+      "name": "Jevons Paradox",
+      "hint": "Increases in efficiency in using a resource tend to increase the overall rate of consumption of that resource."
+    },
+    {
+      "name": "The Mpemba Effect",
+      "hint": "Under specific thermodynamic conditions, warm water can freeze faster than cold water."
+    }
+  ],
+  "neuroscience": [
+    {
+      "name": "The Zeigarnik Effect",
+      "hint": "Uncompleted tasks create cognitive tension, consuming working memory until resolved or noted down."
+    },
+    {
+      "name": "Ultradian Rhythms",
+      "hint": "The brain's natural 90-minute cycle of peak alertness followed by a mandatory 20-minute recovery trough."
+    },
+    {
+      "name": "Default Mode Network & Shower Epiphanies",
+      "hint": "Why the brain makes its greatest creative breakthroughs when you disengage from active focus."
+    },
+    {
+      "name": "Cognitive Load Theory",
+      "hint": "How context switching and micro-interruptions exhaust working memory before real deep work begins."
+    },
+    {
+      "name": "Spaced Repetition & Ebbinghaus Curve",
+      "hint": "Why reviewing information right before you're about to forget it locks it permanently in memory."
+    },
+    {
+      "name": "Dopamine Prediction Error",
+      "hint": "How anticipation and unexpected rewards drive motivation far more than the actual outcome."
+    }
+  ],
+  "thought_experiments": [
+    {
+      "name": "The Experience Machine (Nozick)",
+      "hint": "If a supercomputer could give you any pleasurable experience for life, would you plug in permanently?"
+    },
+    {
+      "name": "Mary the Color Scientist (Jackson)",
+      "hint": "A neuroscientist knows every physical fact about color from a black-and-white room. When she sees red, does she learn anything new?"
+    },
+    {
+      "name": "The Chinese Room (Searle)",
+      "hint": "A person follows rulebooks to translate Chinese symbols without understanding a word. Does the system understand?"
+    },
+    {
+      "name": "The Invisible Gorilla",
+      "hint": "When focusing intensely on one task, the human brain systematically tunes out obvious anomalies in plain sight."
+    }
+  ],
+  "quotes": [
+    {
+      "name": "Marcus Aurelius",
+      "hint": "Stoic wisdom on focusing only on what is within your control."
+    },
+    {
+      "name": "Seneca",
+      "hint": "On time management, brevity of life, and avoiding needless anxiety."
+    },
+    {
+      "name": "Epictetus",
+      "hint": "On freedom, perception, and reacting to adversity with equanimity."
+    },
+    {
+      "name": "Lao Tzu",
+      "hint": "On simplicity, patience, flow, and effortless action (Wu Wei)."
+    },
+    {
+      "name": "Aristotle",
+      "hint": "On virtue ethics, habits, and excellence as repeated practice."
+    },
+    {
+      "name": "Friedrich Nietzsche",
+      "hint": "On overcoming adversity, self-mastery, and questioning defaults."
+    },
+    {
+      "name": "Confucius",
+      "hint": "On continuous self-improvement, humility, and moral integrity."
+    },
+    {
+      "name": "Alan Watts",
+      "hint": "On presence, Eastern philosophy, and letting go of rigid control."
+    },
+    {
+      "name": "Viktor Frankl",
+      "hint": "On finding purpose in suffering and the space between stimulus and response."
+    },
+    {
+      "name": "Carl Jung",
+      "hint": "On shadow work, self-awareness, and bringing the unconscious to light."
+    }
+  ],
+  "facts": [
+    {
+      "name": "Deep-Ocean Hydrothermal Vents",
+      "hint": "Ecosystems thriving in total darkness on chemosynthesis rather than sunlight."
+    },
+    {
+      "name": "Fungal Mycorrhizal Networks",
+      "hint": "Underground fungal superhighways enabling trees and plants to trade nutrients and warnings."
+    },
+    {
+      "name": "Superfluidity at Macro Scales",
+      "hint": "Liquid helium climbing container walls with zero viscosity near absolute zero."
+    },
+    {
+      "name": "Corvid Tool Use & Problem Solving",
+      "hint": "Crows and ravens inventing multi-stage tools and passing knowledge down generations."
+    },
+    {
+      "name": "Polynesian Open-Ocean Star Navigation",
+      "hint": "Navigating thousands of miles of open Pacific using swell patterns, birds, and star paths."
+    },
+    {
+      "name": "Ant Colony Decentralized Computing",
+      "hint": "Ant colonies solving complex traveling-salesman routing problems with zero central coordination."
+    }
+  ]
+}
