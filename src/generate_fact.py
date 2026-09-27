@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 
 from src.config import TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, TELEGRAM_API_URL
 from src.llm_client import generate_llm_response
+from src.talivy_search import clean_telegram_html
 
 logger = logging.getLogger("generate_fact")
 
@@ -22,13 +23,13 @@ except Exception as e:
     SEEDS_DATA = {}
 
 MODES = [
-    "mental_model",
     "cognitive_bias",
-    "paradox",
     "neuroscience",
+    "mental_model",
+    "paradox",
     "thought_experiment",
-    "quote",
-    "fact"
+    "fact",
+    "quote"
 ]
 
 
@@ -48,150 +49,157 @@ def _get_seed_entry(category_key: str, fallback_name: str, fallback_hint: str) -
 
 def generate_fact(mode: str = None, return_topic: bool = False):
     """
-    Generate an energizing, high-signal cognitive insight, mental model, paradox, quote, or fact.
+    Generate a short, punchy, zero-buzzword cognitive insight, bias trap, or neuro protocol.
+    Strictly under 70 words.
     """
     if mode not in MODES:
-        # Weighted random selection: prioritizing high-impact mental models & cognitive jolts
+        # Weighted selection prioritizing Cognitive Traps & Neuroscience / Biology hacks
         mode = random.choices(
             MODES,
-            weights=[0.22, 0.20, 0.18, 0.16, 0.10, 0.07, 0.07]
+            weights=[0.25, 0.25, 0.20, 0.14, 0.06, 0.05, 0.05]
         )[0]
 
-    temperature = random.uniform(0.6, 0.85)
-    current_date = datetime.now(timezone.utc).strftime('%B %Y')
+    temperature = random.uniform(0.65, 0.85)
 
-    if mode == "mental_model":
-        seed_name, seed_desc = _get_seed_entry("mental_models", "Chesterton's Fence", "Never remove a rule until you understand why it was built.")
-        topic = f"Mental Model: {seed_name}"
-        system_content = (
-            "You are a cognitive science and decision-making expert. "
-            "Your goal is to write a crisp, energizing, high-impact breakdown of a mental model that delivers an instant 'brain jolt'."
-        )
-        user_content = (
-            f"Current date: {current_date}.\n"
-            f"Topic: Mental Model '{seed_name}' ({seed_desc}).\n\n"
-            "Format the response using clean HTML tags (<b>, <i>, <code>) matching this EXACT structure:\n\n"
-            f"🧠 <b>Mental Model: {seed_name}</b>\n\n"
-            "💡 <b>The Core Principle:</b>\n"
-            "[1-2 punchy sentences explaining the core truth clearly and simply]\n\n"
-            "🎯 <b>Real-World Application:</b>\n"
-            "[1-2 practical sentences on how smart engineers/leaders apply this to avoid costly mistakes or solve tough problems]\n\n"
-            "❓ <b>Brain Jolt:</b>\n"
-            "[1 thought-provoking question or reflection prompt for the reader]"
-        )
-
-    elif mode == "cognitive_bias":
+    if mode == "cognitive_bias":
         seed_name, seed_desc = _get_seed_entry("cognitive_biases", "Survivorship Bias", "Focusing on visible winners while overlooking invisible failures.")
         topic = f"Cognitive Bias: {seed_name}"
         system_content = (
-            "You are a behavioral economics and cognitive bias expert. "
-            "Your goal is to explain a cognitive blind spot with punchy clarity and provide an actionable defense."
+            "You are an expert cognitive psychologist. "
+            "Write a short, punchy breakdown of a cognitive bias. "
+            "STRICT CONSTRAINTS:\n"
+            "- MAXIMUM 65 words total.\n"
+            "- ZERO buzzwords, zero hype, zero fluff ('brain jolt', 'top-tier engineers', 'where it stings' are strictly forbidden).\n"
+            "- Format with clean Telegram HTML (<b>, <i>, <code>). Never use markdown asterisks (**) or markdown formatting.\n"
+            "- Do not include greetings or filler preamble."
         )
         user_content = (
-            f"Current date: {current_date}.\n"
-            f"Topic: Cognitive Bias '{seed_name}' ({seed_desc}).\n\n"
-            "Format the response using clean HTML tags (<b>, <i>, <code>) matching this EXACT structure:\n\n"
+            f"Topic: Cognitive Trap '{seed_name}' ({seed_desc}).\n\n"
+            "Format the response using this EXACT HTML structure (strictly under 65 words):\n\n"
             f"⚡ <b>Cognitive Trap: {seed_name}</b>\n\n"
-            "🪤 <b>The Brain Trick:</b>\n"
-            "[1-2 punchy sentences explaining how our subconscious intuition deceives us]\n\n"
-            "💥 <b>Where It Stings:</b>\n"
-            "[1-2 realistic sentences showing a scenario in tech, work, or decision-making where people fall for it]\n\n"
-            "🛡️ <b>Mental Defense:</b>\n"
-            "[1 concrete rule or mental habit to catch and disarm this bias]"
-        )
-
-    elif mode == "paradox":
-        seed_name, seed_desc = _get_seed_entry("paradoxes", "The Fermi Paradox", "If the universe is so vast, where are all the extraterrestrials?")
-        topic = f"Paradox: {seed_name}"
-        system_content = (
-            "You are a mathematician, physicist, and logic enthusiast. "
-            "Your goal is to explain a fascinating counter-intuitive paradox that challenges conventional common sense."
-        )
-        user_content = (
-            f"Current date: {current_date}.\n"
-            f"Topic: Paradox '{seed_name}' ({seed_desc}).\n\n"
-            "Format the response using clean HTML tags (<b>, <i>, <code>) matching this EXACT structure:\n\n"
-            f"🤯 <b>Mind-Bending Paradox: {seed_name}</b>\n\n"
-            "🌀 <b>The Counter-Intuitive Twist:</b>\n"
-            "[1-2 sentences clearly describing the scenario that defies gut intuition]\n\n"
-            "🔍 <b>Why It Actually Works:</b>\n"
-            "[1-2 crisp sentences revealing the mathematical, physical, or logical mechanism behind it]\n\n"
-            "💡 <b>The Takeaway:</b>\n"
-            "[1 sentence on what this reveals about assumptions and complex systems]"
+            "[1-2 punchy sentences exposing how human intuition is tricked by this blindspot. Grounded and concrete.]\n\n"
+            "🛡️ <i>The defense:</i> [1 sharp diagnostic question or practical mental habit to catch and disarm this bias.]"
         )
 
     elif mode == "neuroscience":
-        seed_name, seed_desc = _get_seed_entry("neuroscience", "Default Mode Network", "Creative breakthroughs occur when disengaging from active focus.")
+        seed_name, seed_desc = _get_seed_entry("neuroscience", "Attention Residue", "Context switching leaves focus trapped in previous tasks.")
         topic = f"Neuroscience: {seed_name}"
         system_content = (
             "You are a neuroscientist and cognitive performance specialist. "
-            "Your goal is to share a fascinating brain mechanism coupled with a 60-second high-performance habit."
+            "Write a short, punchy insight on a brain mechanism and an immediate micro-protocol. "
+            "STRICT CONSTRAINTS:\n"
+            "- MAXIMUM 65 words total.\n"
+            "- ZERO buzzwords, zero hype, zero pop-science fluff ('brain jolt', 'supercharge', 'game changer' are strictly forbidden).\n"
+            "- Format with clean Telegram HTML (<b>, <i>, <code>). Never use markdown asterisks (**) or markdown formatting.\n"
+            "- Do not include greetings or filler preamble."
         )
         user_content = (
-            f"Current date: {current_date}.\n"
-            f"Topic: Neuroscience & Brain Performance '{seed_name}' ({seed_desc}).\n\n"
-            "Format the response using clean HTML tags (<b>, <i>, <code>) matching this EXACT structure:\n\n"
-            f"🧬 <b>Brain & Performance: {seed_name}</b>\n\n"
-            "🔬 <b>The Underlying Biology:</b>\n"
-            "[1-2 sentences on what actually happens in the brain/neural circuitry]\n\n"
-            "⚡ <b>60-Second Protocol:</b>\n"
-            "[1-2 actionable, practical sentences explaining how to leverage this right now to boost focus, clarity, or recovery]"
+            f"Topic: Neuroscience & Biology '{seed_name}' ({seed_desc}).\n\n"
+            "Format the response using this EXACT HTML structure (strictly under 65 words):\n\n"
+            f"🧬 <b>Biology & Focus: {seed_name}</b>\n\n"
+            "[1-2 crisp sentences on the actual biological or neural mechanism. Scientifically accurate.]\n\n"
+            "⚡ <i>The 60-second protocol:</i> [1 actionable, practical sentence on how to leverage or reset this right now.]"
+        )
+
+    elif mode == "mental_model":
+        seed_name, seed_desc = _get_seed_entry("mental_models", "Gall's Law", "Complex systems that work evolved from simple systems.")
+        topic = f"Mental Model: {seed_name}"
+        system_content = (
+            "You are a systems thinker and decision-making expert. "
+            "Write a short, punchy breakdown of a mental model. "
+            "STRICT CONSTRAINTS:\n"
+            "- MAXIMUM 65 words total.\n"
+            "- ZERO buzzwords, zero corporate clichés, zero hype ('elite leaders', 'brain jolt', 'slashing' are strictly forbidden).\n"
+            "- Format with clean Telegram HTML (<b>, <i>, <code>). Never use markdown asterisks (**) or markdown formatting.\n"
+            "- Do not include greetings or filler preamble."
+        )
+        user_content = (
+            f"Topic: Mental Model '{seed_name}' ({seed_desc}).\n\n"
+            "Format the response using this EXACT HTML structure (strictly under 65 words):\n\n"
+            f"🧠 <b>Mental Model: {seed_name}</b>\n\n"
+            "[1-2 punchy sentences explaining the core reality clearly and simply.]\n\n"
+            "💡 <i>The takeaway:</i> [1 crisp sentence translating this into a practical rule of thumb or decision heuristic.]"
+        )
+
+    elif mode == "paradox":
+        seed_name, seed_desc = _get_seed_entry("paradoxes", "Braess's Paradox", "Adding network capacity can slow down throughput.")
+        topic = f"Paradox: {seed_name}"
+        system_content = (
+            "You are a mathematician and systems logician. "
+            "Explain a counter-intuitive paradox with crisp clarity. "
+            "STRICT CONSTRAINTS:\n"
+            "- MAXIMUM 65 words total.\n"
+            "- ZERO buzzwords, zero fluff.\n"
+            "- Format with clean Telegram HTML (<b>, <i>, <code>). Never use markdown asterisks (**) or markdown formatting.\n"
+            "- Do not include greetings or filler preamble."
+        )
+        user_content = (
+            f"Topic: Paradox '{seed_name}' ({seed_desc}).\n\n"
+            "Format the response using this EXACT HTML structure (strictly under 65 words):\n\n"
+            f"🤯 <b>Paradox: {seed_name}</b>\n\n"
+            "[1-2 sentences clearly describing the counter-intuitive twist where gut intuition fails.]\n\n"
+            "🔍 <i>The lesson:</i> [1 crisp sentence revealing the underlying mechanism and what it teaches about systems or assumptions.]"
         )
 
     elif mode == "thought_experiment":
-        seed_name, seed_desc = _get_seed_entry("thought_experiments", "The Experience Machine", "Would you plug into a simulation of endless pleasure?")
+        seed_name, seed_desc = _get_seed_entry("thought_experiments", "The Experience Machine (Nozick)", "Would you plug into simulated endless pleasure?")
         topic = f"Thought Experiment: {seed_name}"
         system_content = (
-            "You are a philosopher and cognitive psychologist. "
-            "Your goal is to pose an engaging, 1-minute lateral thought experiment."
+            "You are an analytical philosopher and cognitive scientist. "
+            "Present a short, thought-provoking thought experiment. "
+            "STRICT CONSTRAINTS:\n"
+            "- MAXIMUM 65 words total.\n"
+            "- ZERO buzzwords.\n"
+            "- Format with clean Telegram HTML (<b>, <i>, <code>). Never use markdown asterisks (**) or markdown formatting.\n"
+            "- Do not include greetings or filler preamble."
         )
         user_content = (
-            f"Current date: {current_date}.\n"
             f"Topic: Thought Experiment '{seed_name}' ({seed_desc}).\n\n"
-            "Format the response using clean HTML tags (<b>, <i>, <code>) matching this EXACT structure:\n\n"
-            f"🎯 <b>Micro Thought Experiment: {seed_name}</b>\n\n"
-            "🎭 <b>The Scenario:</b>\n"
-            "[2 sentences setting up the dilemma or thought experiment]\n\n"
-            "⚖️ <b>The Tension:</b>\n"
-            "[1-2 sentences on why this breaks ordinary logic or why reasonable minds disagree]\n\n"
-            "❓ <b>Your Verdict:</b>\n"
-            "[1 direct question asking the reader how they would solve or view this]"
+            "Format the response using this EXACT HTML structure (strictly under 65 words):\n\n"
+            f"🎯 <b>Thought Experiment: {seed_name}</b>\n\n"
+            "[1-2 sentences setting up the scenario and the core tension.]\n\n"
+            "❓ <i>The question:</i> [1 sharp question asking how the reader resolves the dilemma.]"
         )
 
     elif mode == "quote":
-        seed_name, seed_desc = _get_seed_entry("quotes", "Marcus Aurelius", "Stoic focus on what is within your control.")
+        seed_name, seed_desc = _get_seed_entry("quotes", "Charlie Munger", "Avoiding stupidity beats seeking brilliance.")
         topic = f"Quote: {seed_name}"
         system_content = (
             "You are a curator of timeless philosophy and practical wisdom. "
-            "Provide an authentic, profound quote accompanied by a punchy modern takeaway."
+            "Share an authentic, profound quote with a modern takeaway. "
+            "STRICT CONSTRAINTS:\n"
+            "- MAXIMUM 50 words total.\n"
+            "- ZERO clichés.\n"
+            "- Format with clean Telegram HTML (<b>, <i>, <code>). Never use markdown asterisks (**) or markdown formatting.\n"
+            "- Do not include greetings or filler preamble."
         )
         user_content = (
-            f"Current date: {current_date}.\n"
-            f"Provide an inspiring, authentic quote from '{seed_name}' (Focus: {seed_desc}).\n\n"
-            "Format the response using clean HTML tags (<b>, <i>, <code>) matching this EXACT structure:\n\n"
+            f"Provide an authentic, memorable quote from '{seed_name}' (Focus: {seed_desc}).\n\n"
+            "Format the response using this EXACT HTML structure (strictly under 50 words):\n\n"
             "💡 <b>Timeless Wisdom</b>\n\n"
-            f'"[Quote text]"\n'
+            '"[Authentic quote text]"\n'
             f'— <b>{seed_name}</b>\n\n'
-            "🎯 <b>Modern Takeaway:</b>\n"
-            "[1-2 sentences translating this timeless insight into modern engineering, work, or mindset]"
+            "🎯 <i>The takeaway:</i> [1 punchy sentence applying this to modern work or mindset without clichés.]"
         )
 
-    else: # fact
-        seed_name, seed_desc = _get_seed_entry("facts", "Fungal Mycorrhizal Networks", "Underground tree communication networks.")
+    else:  # fact
+        seed_name, seed_desc = _get_seed_entry("facts", "Ant Colony Optimization", "Ants solving routing problems without central planning.")
         topic = f"Curious Discovery: {seed_name}"
         system_content = (
-            "You are a curator of rare scientific oddities and astonishing natural discoveries. "
-            "Focus on mind-expanding phenomena that spark wonder and curiosity."
+            "You are a science communicator and naturalist. "
+            "Share an astonishing natural mechanism or scientific anomaly. "
+            "STRICT CONSTRAINTS:\n"
+            "- MAXIMUM 60 words total.\n"
+            "- ZERO buzzwords.\n"
+            "- Format with clean Telegram HTML (<b>, <i>, <code>). Never use markdown asterisks (**) or markdown formatting.\n"
+            "- Do not include greetings or filler preamble."
         )
         user_content = (
-            f"Current date: {current_date}.\n"
-            f"Topic: Unusual discovery in '{seed_name}' ({seed_desc}).\n\n"
-            "Format the response using clean HTML tags (<b>, <i>, <code>) matching this EXACT structure:\n\n"
-            "🔬 <b>Curious Discovery</b>\n\n"
-            "🌌 <b>The Phenomenon:</b>\n"
-            "[2 sentences revealing a surprising, lesser-known scientific truth or natural mechanism]\n\n"
-            "💡 <b>Why It Matters:</b>\n"
-            "[1 sentence explaining the deeper beauty or engineering wonder behind it]"
+            f"Topic: Curious Discovery '{seed_name}' ({seed_desc}).\n\n"
+            "Format the response using this EXACT HTML structure (strictly under 60 words):\n\n"
+            f"🔬 <b>Curious Discovery: {seed_name}</b>\n\n"
+            "[1-2 sentences revealing the surprising natural mechanism or scientific anomaly.]\n\n"
+            "💡 <i>The insight:</i> [1 sentence on the broader principle or systems parallel.]"
         )
 
     messages = [
@@ -201,6 +209,7 @@ def generate_fact(mode: str = None, return_topic: bool = False):
 
     try:
         content = generate_llm_response(messages, temperature=temperature)
+        content = clean_telegram_html(content).strip()
         if return_topic:
             return content, topic, mode
         return content, mode
@@ -216,49 +225,45 @@ def generate_fact(mode: str = None, return_topic: bool = False):
 def _get_curated_fallback(mode: str, seed_name: str) -> str:
     """High-quality offline fallback if all LLM providers fail."""
     fallbacks = {
-        "mental_model": (
-            f"🧠 <b>Mental Model: Chesterton's Fence</b>\n\n"
-            "💡 <b>The Core Principle:</b>\n"
-            "Never destroy a fence, delete legacy code, or dismantle a rule until you understand the exact problem it was originally created to solve.\n\n"
-            "🎯 <b>Real-World Application:</b>\n"
-            "Before refactoring 'ugly' production systems, deduce what silent race condition or edge case it was designed to prevent.\n\n"
-            "❓ <b>Brain Jolt:</b>\n"
-            "What 'redundant' step in your daily workflow might secretly be saving you from failure?"
-        ),
         "cognitive_bias": (
-            f"⚡ <b>Cognitive Trap: Survivorship Bias</b>\n\n"
-            "🪤 <b>The Brain Trick:</b>\n"
+            "⚡ <b>Cognitive Trap: Survivorship Bias</b>\n\n"
             "We obsess over visible success stories while ignoring the invisible graveyard of failures that used the exact same strategy.\n\n"
-            "💥 <b>Where It Stings:</b>\n"
-            "Copying the work habits of a billionaire tech founder while ignoring the thousands of bankrupt founders who did the same.\n\n"
-            "🛡️ <b>Mental Defense:</b>\n"
-            "Always ask: <code>'Where is the graveyard?'</code> and study what failed, not just what survived."
-        ),
-        "paradox": (
-            f"🤯 <b>Mind-Bending Paradox: Braess's Paradox</b>\n\n"
-            "🌀 <b>The Counter-Intuitive Twist:</b>\n"
-            "Adding an extra road to a congested traffic network can actually increase the average travel time for all drivers.\n\n"
-            "🔍 <b>Why It Actually Works:</b>\n"
-            "When individual actors choose optimal self-interested shortcuts, they create new bottleneck externalities across the entire network.\n\n"
-            "💡 <b>The Takeaway:</b>\n"
-            "Local optimizations frequently degrade global system performance."
+            "🛡️ <i>The defense:</i> Whenever evaluating advice, ask: <code>'What did the people who failed do that looked identical?'</code>"
         ),
         "neuroscience": (
-            f"🧬 <b>Brain & Performance: Default Mode Network</b>\n\n"
-            "🔬 <b>The Underlying Biology:</b>\n"
-            "When you step away from active task-focus, the brain's Default Mode Network links disparate memories and delivers creative breakthroughs.\n\n"
-            "⚡ <b>60-Second Protocol:</b>\n"
-            "When stuck on a problem, take a 5-minute walk without your phone or headphones to activate subconscious problem solving."
+            "🧬 <b>Biology & Focus: Attention Residue</b>\n\n"
+            "Checking a message for 10 seconds leaves a fragment of your neural focus trapped in that previous context for up to 20 minutes.\n\n"
+            "⚡ <i>The 60-second protocol:</i> When hitting a mental wall, look away at a distant object for 90 seconds instead of tab-switching—letting working memory clear without leaving residue."
+        ),
+        "mental_model": (
+            "🧠 <b>Mental Model: Gall's Law</b>\n\n"
+            "A complex system that works invariably evolved from a simple system that worked. "
+            "A complex system designed from scratch never works and cannot be patched to make it work.\n\n"
+            "💡 <i>The takeaway:</i> Don't build the cathedral on day one. Ship the simplest working prototype, let reality stress-test it, and evolve."
+        ),
+        "paradox": (
+            "🤯 <b>Paradox: Braess's Paradox</b>\n\n"
+            "Adding a new road to a congested highway network can actually increase average travel time for all drivers.\n\n"
+            "🔍 <i>The lesson:</i> When individual actors greedily choose shortcuts, they bottleneck shared infrastructure. Local optimizations often degrade global performance."
+        ),
+        "thought_experiment": (
+            "🎯 <b>Thought Experiment: The Experience Machine</b>\n\n"
+            "If a supercomputer could stimulate your brain to experience any fantasy for life while your body floated in a tank, would you plug in permanently?\n\n"
+            "❓ <i>The question:</i> Do you value experiencing feelings of achievement, or actually doing things that matter in reality?"
         ),
         "quote": (
             "💡 <b>Timeless Wisdom</b>\n\n"
-            '"You have power over your mind - not outside events. Realize this, and you will find strength."\n'
-            '— <b>Marcus Aurelius</b>\n\n'
-            "🎯 <b>Modern Takeaway:</b>\n"
-            "Focus 100% of your energy on your reaction and execution, rather than raging against external noise."
-        )
+            '"It is remarkable how much long-term advantage people like us have gotten by trying to be consistently not stupid, instead of trying to be very intelligent."\n'
+            '— <b>Charlie Munger</b>\n\n'
+            "🎯 <i>The takeaway:</i> Most lasting success comes from systematically removing unforced errors rather than seeking brilliant moves."
+        ),
+        "fact": (
+            "🔬 <b>Curious Discovery: Ant Colony Optimization</b>\n\n"
+            "Ant colonies solve complex traveling-salesperson routing problems with zero central coordination by using evaporating pheromone trails.\n\n"
+            "💡 <i>The insight:</i> Simple local feedback loops consistently outperform heavy, brittle centralized architectures."
+        ),
     }
-    return fallbacks.get(mode, fallbacks["mental_model"])
+    return fallbacks.get(mode, fallbacks["cognitive_bias"])
 
 
 def send_telegram_message(message: str) -> bool:

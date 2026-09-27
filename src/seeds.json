@@ -1,28 +1,412 @@
 {
+  "cognitive_biases": [
+    {
+      "name": "Survivorship Bias",
+      "hint": "Focusing on visible winners while overlooking invisible failures."
+    },
+    {
+      "name": "Sunk Cost Fallacy",
+      "hint": "Continuing an unprofitable endeavor merely because resources were already spent."
+    },
+    {
+      "name": "Anchoring Bias",
+      "hint": "Fixating disproportionately on the first piece of information received."
+    },
+    {
+      "name": "Dunning-Kruger Effect",
+      "hint": "Beginners overestimating competence while true experts underestimate theirs."
+    },
+    {
+      "name": "Fundamental Attribution Error",
+      "hint": "Attributing others' mistakes to character flaws while excusing your own as situational."
+    },
+    {
+      "name": "Framing Effect",
+      "hint": "Drawing opposite conclusions from identical data based entirely on how it is presented."
+    },
+    {
+      "name": "Confirmation Bias",
+      "hint": "Searching only for evidence that validates preexisting convictions."
+    },
+    {
+      "name": "Status Quo Bias",
+      "hint": "Defaulting to existing routines even when better alternatives exist."
+    },
+    {
+      "name": "Curse of Knowledge",
+      "hint": "Assuming others understand complex concepts simply because they are obvious to you."
+    },
+    {
+      "name": "Peak-End Rule",
+      "hint": "Remembering an experience by its emotional peak and conclusion, not its duration."
+    },
+    {
+      "name": "Availability Heuristic",
+      "hint": "Overestimating the frequency of events that come to mind quickly."
+    },
+    {
+      "name": "Hyperbolic Discounting",
+      "hint": "Valuing immediate small gratification over vastly larger delayed rewards."
+    },
+    {
+      "name": "Pluralistic Ignorance",
+      "hint": "Privately rejecting a norm while assuming everyone else accepts it."
+    },
+    {
+      "name": "Streetlight Effect",
+      "hint": "Searching for solutions where searching is easiest rather than where the solution actually is."
+    },
+    {
+      "name": "Hindsight Bias",
+      "hint": "Believing an unpredictable outcome was obvious and foreseeable all along."
+    },
+    {
+      "name": "Naive Realism",
+      "hint": "Believing you see reality objectively, while those who disagree must be biased or uninformed."
+    },
+    {
+      "name": "Base Rate Neglect",
+      "hint": "Ignoring statistical baseline probabilities in favor of compelling individual anecdotes."
+    },
+    {
+      "name": "Outcome Bias",
+      "hint": "Judging a decision's quality solely by its outcome rather than the quality of the process."
+    },
+    {
+      "name": "Loss Aversion",
+      "hint": "Feeling the psychological pain of a loss roughly twice as intensely as the joy of equivalent gain."
+    },
+    {
+      "name": "Zero-Risk Bias",
+      "hint": "Overpaying to eliminate a small risk entirely rather than reducing a much larger overall risk."
+    },
+    {
+      "name": "Bandwagon Effect",
+      "hint": "Adopting beliefs simply because a growing crowd has already done so."
+    },
+    {
+      "name": "Decoy Effect",
+      "hint": "Changing preference between two options when a third, dominated option is introduced."
+    },
+    {
+      "name": "Negativity Bias",
+      "hint": "Giving disproportionate cognitive weight to negative events over positive ones."
+    },
+    {
+      "name": "IKEA Effect",
+      "hint": "Placing an irrationally high value on products or projects you helped assemble."
+    },
+    {
+      "name": "Blind Spot Bias",
+      "hint": "Recognizing cognitive biases easily in others while failing to notice them in yourself."
+    },
+    {
+      "name": "False Consensus Effect",
+      "hint": "Overestimating how many people share your personal beliefs and preferences."
+    },
+    {
+      "name": "Frequency Illusion (Baader-Meinhof)",
+      "hint": "Noticing a recently learned word, thing, or concept everywhere you look."
+    },
+    {
+      "name": "Planning Fallacy",
+      "hint": "Systematically underestimating the time, cost, and risk of future actions."
+    },
+    {
+      "name": "Egocentric Bias",
+      "hint": "Remembering and weighting your own contributions far more than the contributions of others."
+    },
+    {
+      "name": "Empathy Gap",
+      "hint": "Underestimating the influence of visceral physical and emotional drives on future decision making."
+    },
+    {
+      "name": "Omission Bias",
+      "hint": "Judging harmful actions as worse than equally harmful failures to act."
+    },
+    {
+      "name": "Overconfidence Bias",
+      "hint": "Subjective confidence in judgments being reliably higher than objective accuracy."
+    },
+    {
+      "name": "Law of the Instrument (Maslow's Hammer)",
+      "hint": "Over-relying on a familiar tool or framework to solve completely unsuitable problems."
+    },
+    {
+      "name": "Focusing Illusion",
+      "hint": "Thinking nothing in life is as important as whatever you are currently thinking about."
+    },
+    {
+      "name": "Normalcy Bias",
+      "hint": "Underestimating the possibility and effect of a disaster because it hasn't happened before."
+    },
+    {
+      "name": "Projection Bias",
+      "hint": "Assuming your future self will have the exact same tastes and priorities as you do right now."
+    },
+    {
+      "name": "Self-Serving Bias",
+      "hint": "Claiming personal credit for successes while blaming external circumstances for failures."
+    },
+    {
+      "name": "Authority Bias",
+      "hint": "Attributing greater accuracy to the opinion of an authority figure regardless of substance."
+    },
+    {
+      "name": "Halo Effect",
+      "hint": "Allowing an initial positive impression in one trait to influence global judgments of character."
+    },
+    {
+      "name": "Choice-Supportive Bias",
+      "hint": "Retroactively attributing positive qualities to whichever option you previously selected."
+    },
+    {
+      "name": "Backfire Effect",
+      "hint": "Strengthening prior convictions when confronted with contradictory evidence."
+    },
+    {
+      "name": "Rhyme-as-Reason Effect",
+      "hint": "Judging statements as more truthful and accurate simply because they are formulated to rhyme."
+    },
+    {
+      "name": "Subadditivity Effect",
+      "hint": "Judging the probability of a whole as less than the sum of probabilities of its parts."
+    },
+    {
+      "name": "Effort Justification",
+      "hint": "Overvaluing an outcome merely because attaining it required painful effort."
+    },
+    {
+      "name": "Social Proof Bias",
+      "hint": "Assuming surrounding individuals possess better knowledge about the correct course of action."
+    },
+    {
+      "name": "Survivorship of Metrics (Goodhart's Trap)",
+      "hint": "Optimizing for easily recorded metrics while starving invisible core qualities."
+    },
+    {
+      "name": "Restraint Bias",
+      "hint": "Overestimating your ability to resist impulsive temptation when faced with it directly."
+    },
+    {
+      "name": "Distinction Bias",
+      "hint": "Viewing two options as distinctive when evaluating them side-by-side, but identical in isolation."
+    },
+    {
+      "name": "Just-World Fallacy",
+      "hint": "Assuming actions inevitably have morally fair and fitting consequences for the actor."
+    },
+    {
+      "name": "Third-Person Effect",
+      "hint": "Believing mass media or advertising affects other people far more than it affects you."
+    }
+  ],
+  "neuroscience": [
+    {
+      "name": "Attention Residue",
+      "hint": "Context-switching leaves neural focus trapped in the prior task for up to 20 minutes."
+    },
+    {
+      "name": "Optic Flow & Panoramic Vision",
+      "hint": "Expanding peripheral vision down-regulates sympathetic fight-or-flight arousal in seconds."
+    },
+    {
+      "name": "Adenosine & Sleep Pressure",
+      "hint": "Adenosine accumulates during waking hours, creating physical sleepiness that caffeine only masks."
+    },
+    {
+      "name": "Dopamine Reward Prediction Error",
+      "hint": "Dopamine fires on the gap between anticipation and reality, not on the reward itself."
+    },
+    {
+      "name": "Ultradian Rhythms",
+      "hint": "The brain operates in 90-minute ultradian cycles of focus followed by mandatory recovery troughs."
+    },
+    {
+      "name": "Default Mode Network",
+      "hint": "Subconscious neural circuits synthesize disparate memories and solve complex problems during rest."
+    },
+    {
+      "name": "Cognitive Load & Working Memory Buffer",
+      "hint": "Working memory holds roughly 4 chunks of active information before degradation occurs."
+    },
+    {
+      "name": "Spaced Repetition & Synaptic Consolidation",
+      "hint": "Re-testing information right before it fades triggers long-term potentiation in synapses."
+    },
+    {
+      "name": "Physiological Sigh",
+      "hint": "Two quick nasal inhales followed by a long, slow exhale rapidly slows heart rate via the vagus nerve."
+    },
+    {
+      "name": "Temperature Minimum & Circadian Reset",
+      "hint": "Core body temperature hits its lowest point roughly 2 hours before natural waking."
+    },
+    {
+      "name": "Non-Sleep Deep Rest (NSDR)",
+      "hint": "20 minutes of shallow hypnotic relaxation restores striatal dopamine and cognitive stamina."
+    },
+    {
+      "name": "Visual Anchoring & Prefrontal Focus",
+      "hint": "Restricting visual gaze to a single point primes prefrontal neural circuits for deep concentration."
+    },
+    {
+      "name": "Cortisol Awakening Response",
+      "hint": "A healthy morning cortisol spike sets the internal clock for daytime alertness and nocturnal sleep."
+    },
+    {
+      "name": "Myelination & Deep Practice",
+      "hint": "Repetitive, high-focus practice wraps neural axons in myelin, permanently accelerating electrical signaling."
+    },
+    {
+      "name": "State-Dependent Learning",
+      "hint": "Information is recalled most accurately when the internal physiological state matches the learning state."
+    },
+    {
+      "name": "Error-Driven Neuroplasticity",
+      "hint": "Experiencing friction and frustration triggers acetylcholine and epinephrine release, marking synapses for rewiring."
+    },
+    {
+      "name": "Melatonin Suppression from Blue Light",
+      "hint": "Short-wavelength light strikes melanopsin retinal cells, shutting down pineal melatonin synthesis."
+    },
+    {
+      "name": "Dual-Task Interference",
+      "hint": "The prefrontal cortex cannot process two conscious linguistic tasks simultaneously without massive error rates."
+    },
+    {
+      "name": "Stochastic Resonance",
+      "hint": "Low levels of ambient pink or white noise can sharpen weak sensory signals in neural circuits."
+    },
+    {
+      "name": "Glymphatic Cleansing",
+      "hint": "Cerebrospinal fluid flushes metabolic waste and amyloid beta from brain interstitial space during deep slow-wave sleep."
+    },
+    {
+      "name": "Reticular Activating System",
+      "hint": "The brainstem gateway that filters millions of sensory inputs down to what you consciously care about."
+    },
+    {
+      "name": "Basal Ganglia Habit Offloading",
+      "hint": "Repeated behaviors migrate from the costly prefrontal cortex into energy-efficient basal ganglia routines."
+    },
+    {
+      "name": "Testing Effect (Effortful Retrieval)",
+      "hint": "Actively recalling an answer from memory strengthens neural pathways far more than re-reading notes."
+    },
+    {
+      "name": "Yerkes-Dodson Arousal Curve",
+      "hint": "Cognitive performance peaks under moderate physiological arousal; too little causes sluggishness, too much causes panic."
+    },
+    {
+      "name": "Interoceptive Awareness",
+      "hint": "The insular cortex processes internal bodily signals (heart rate, breathing) to inform intuitive decision-making."
+    },
+    {
+      "name": "BDNF from Aerobic Exercise",
+      "hint": "Elevated heart rate triggers Brain-Derived Neurotrophic Factor release, stimulating hippocampal neurogenesis."
+    },
+    {
+      "name": "Anterior Cingulate Cortex & Tenacity",
+      "hint": "Engaging in effortful tasks you do not want to do physically enlarges the anterior mid-cingulate cortex."
+    },
+    {
+      "name": "Foveal Tunneling vs Peripheral Gaze",
+      "hint": "Narrow focal vision activates vigilance pathways, while broad peripheral vision activates parasympathetic calming."
+    },
+    {
+      "name": "Prospective Memory Offloading",
+      "hint": "Writing down an unfinished task relieves working memory tension caused by the Zeigarnik effect."
+    },
+    {
+      "name": "Hippocampal Cognitive Maps",
+      "hint": "Place and grid cells in the hippocampus build spatial navigation maps that double as conceptual memory frameworks."
+    },
+    {
+      "name": "Circadian Feeding Entrainment",
+      "hint": "Peripheral clocks in the liver and gut sync to feeding timing, influencing midday energy crashes."
+    },
+    {
+      "name": "Cognitive Reappraisal",
+      "hint": "Reinterpreting physiological arousal from 'anxiety' to 'excitement' down-regulates amygdala reactivity."
+    },
+    {
+      "name": "L-Theanine Alpha Waves",
+      "hint": "Modulates glutamate receptors to promote calm, relaxed focus without inducing sedation."
+    },
+    {
+      "name": "Synaptic Pruning",
+      "hint": "Microglia physically eliminate weak, unused synapses during deep sleep, keeping neural networks lean."
+    },
+    {
+      "name": "Mirror Neuron Empathy Circuits",
+      "hint": "Motor and premotor neurons fire both when performing an action and when observing another perform it."
+    },
+    {
+      "name": "Neural Entrainment",
+      "hint": "Brainwave frequencies naturally synchronize to repetitive external auditory or visual rhythms."
+    },
+    {
+      "name": "Anterior Mid-Insula Gut-Brain Axis",
+      "hint": "Vagal afferent nerves transmit direct microbial and gastrointestinal signals into affective brain centers."
+    },
+    {
+      "name": "Dopamine Baseline Depletion",
+      "hint": "Pursuing sharp, artificial dopamine spikes inevitably results in a temporary drop below your prior baseline."
+    },
+    {
+      "name": "Cold Shock Epinephrine Surge",
+      "hint": "Brief cold water immersion triggers prolonged, sustained increases in circulating dopamine and epinephrine."
+    },
+    {
+      "name": "Cerebellar Prediction Engine",
+      "hint": "The cerebellum continuously calculates sensory predictions, subtracting expected feedback so the brain focuses on novel anomalies."
+    },
+    {
+      "name": "Striatal Action Selection",
+      "hint": "The dorsal striatum weighs competing motor commands, suppressing all actions except the chosen priority."
+    },
+    {
+      "name": "Olfactory Direct Limbic Pathway",
+      "hint": "Smell bypasses the thalamus relay, routing directly into the amygdala and hippocampus for vivid memory recall."
+    },
+    {
+      "name": "Vocal Feedback Self-Monitoring",
+      "hint": "Auditory cortex attenuates self-generated vocal sounds so you can detect external sounds while speaking."
+    },
+    {
+      "name": "Somatosensory Hand Map Plasticity",
+      "hint": "The cortical area dedicated to fingers expands or contracts rapidly based on fine motor practice."
+    },
+    {
+      "name": "Circadian Melatonin Rebound",
+      "hint": "Allowing eyes to register sunset light cues the suprachiasmatic nucleus to time natural nighttime melatonin release."
+    }
+  ],
   "mental_models": [
+    {
+      "name": "Gall's Law",
+      "hint": "A complex system that works invariably evolved from a simple system that worked."
+    },
     {
       "name": "Chesterton's Fence",
       "hint": "Never remove a fence, rule, or piece of code until you understand why it was built in the first place."
     },
     {
-      "name": "Inversion (Stoic / Jacobi)",
-      "hint": "Instead of asking how to succeed, ask how to avoid obvious failure and invert the problem."
+      "name": "Second-Order Thinking",
+      "hint": "Always ask: 'And then what?' considering downstream secondary and tertiary consequences."
     },
     {
-      "name": "Second-Order Thinking",
-      "hint": "Always ask: 'And then what?' considering the downstream secondary and tertiary consequences."
+      "name": "Inversion (Jacobi / Stoic)",
+      "hint": "Instead of asking how to succeed, ask how to guarantee failure and systematically avoid those steps."
     },
     {
       "name": "First Principles Thinking",
-      "hint": "Boil a problem down to its fundamental truths and reason up from there rather than by analogy."
-    },
-    {
-      "name": "Gall's Law",
-      "hint": "All complex systems that work evolved from simple systems that worked. Designing complex systems from scratch always fails."
+      "hint": "Boil a problem down to its foundational truths and reason up from there rather than by analogy."
     },
     {
       "name": "Lindy Effect",
-      "hint": "The future life expectancy of non-perishable ideas/tools is proportional to their current age."
+      "hint": "The future life expectancy of non-perishable ideas and technologies is proportional to their current age."
     },
     {
       "name": "Hanlon's Razor",
@@ -30,11 +414,11 @@
     },
     {
       "name": "Goodhart's Law",
-      "hint": "When a measure becomes a target, it ceases to be a good measure."
+      "hint": "When a measure becomes a target, it ceases to be a reliable measure."
     },
     {
       "name": "Occam's Razor",
-      "hint": "Among competing hypotheses, the one with the fewest assumptions is usually the correct one."
+      "hint": "Among competing hypotheses that predict equally well, choose the one with the fewest assumptions."
     },
     {
       "name": "Circle of Competence",
@@ -42,207 +426,691 @@
     },
     {
       "name": "Conway's Law",
-      "hint": "Organizations design software architectures that mirror their internal communication structures."
+      "hint": "Organizations design systems that mirror their internal communication structures."
     },
     {
       "name": "Parkinson's Law",
-      "hint": "Work expands so as to fill the time available for its completion."
+      "hint": "Work expands to fill the time allocated for its completion."
     },
     {
       "name": "The Map is Not the Territory",
-      "hint": "Models, abstractions, and specs are useful representations, not reality itself."
+      "hint": "Models, abstractions, and specs are useful simplifications, not reality itself."
     },
     {
       "name": "The Cobra Effect",
-      "hint": "When an attempted solution makes the original problem worse through perverse incentives."
-    }
-  ],
-  "cognitive_biases": [
-    {
-      "name": "Survivorship Bias",
-      "hint": "Focusing on visible winners while overlooking the invisible graveyard of failures."
+      "hint": "When an attempted incentive or solution makes the original problem worse through perverse incentives."
     },
     {
-      "name": "Sunk Cost Fallacy",
-      "hint": "Continuing a failing project because you've already invested time, money, or effort."
+      "name": "Leaky Abstractions",
+      "hint": "All non-trivial abstractions leak details of the underlying implementation they attempt to hide."
     },
     {
-      "name": "Anchoring Bias",
-      "hint": "Relying too heavily on the first piece of information encountered when making decisions."
+      "name": "Hyrum's Law",
+      "hint": "With enough users, every observable behavior of a system will be depended on by somebody."
     },
     {
-      "name": "Dunning-Kruger Effect",
-      "hint": "People with low expertise overestimating their ability, while experts underestimate theirs."
+      "name": "Brooks's Law",
+      "hint": "Adding manpower to a late software project makes it later due to communication overhead."
     },
     {
-      "name": "Fundamental Attribution Error",
-      "hint": "Blaming others' actions on character flaws while excusing your own as situational."
+      "name": "Postel's Law (Robustness Principle)",
+      "hint": "Be conservative in what you send, and liberal in what you accept from others."
     },
     {
-      "name": "Framing Effect",
-      "hint": "Drawing different conclusions from the exact same data depending on how it is presented."
+      "name": "Amdahl's Law",
+      "hint": "The overall performance improvement of a system is strictly limited by its slowest non-parallelizable component."
     },
     {
-      "name": "Confirmation Bias",
-      "hint": "Searching for and interpreting information in a way that confirms preexisting beliefs."
+      "name": "Antifragility (Taleb)",
+      "hint": "Things that benefit and grow stronger from disorder, volatility, stressors, and random shocks."
     },
     {
-      "name": "Status Quo Bias",
-      "hint": "Preferring the current state of affairs over change, even when change offers clear upside."
+      "name": "Ergodicity",
+      "hint": "When the average outcome of a group over time equals the average outcome of an individual over time."
     },
     {
-      "name": "Curse of Knowledge",
-      "hint": "Once you know something deeply, it is nearly impossible to imagine what it's like not to know it."
+      "name": "Ashby's Law of Requisite Variety",
+      "hint": "If a system is to survive, the variety of its control mechanisms must equal or exceed the variety of disturbances."
     },
     {
-      "name": "Peak-End Rule",
-      "hint": "Judging an experience almost entirely based on how it felt at its peak and at its end."
+      "name": "Le Chatelier's Principle",
+      "hint": "When a system in equilibrium is subjected to change, it adjusts to counteract the imposed change."
+    },
+    {
+      "name": "Tragedy of the Commons",
+      "hint": "Individual users acting independently deplete a shared, unowned resource contrary to common good."
+    },
+    {
+      "name": "Red Queen Effect",
+      "hint": "You must continuously adapt and evolve merely to maintain your current competitive position."
+    },
+    {
+      "name": "Power Laws & Fat Tails",
+      "hint": "A tiny fraction of events or inputs generate the overwhelming majority of total outcomes."
+    },
+    {
+      "name": "Normal Accidents (Perrow)",
+      "hint": "In complex, tightly-coupled systems, catastrophic failures are inevitable structural events, not user errors."
+    },
+    {
+      "name": "Gresham's Law",
+      "hint": "Bad money, standards, or incentives drive out good ones when forced to circulate at equal value."
+    },
+    {
+      "name": "Pournelle's Law of Bureaucracy",
+      "hint": "In any bureaucracy, people dedicated to the organization's goals are controlled by those dedicated to the bureaucracy itself."
+    },
+    {
+      "name": "Skin in the Game",
+      "hint": "People who make decisions must share in the downside risk of bad outcomes to ensure sound decisions."
+    },
+    {
+      "name": "Via Negativa",
+      "hint": "Improving systems by subtracting errors, risks, and bad habits rather than adding complexity."
+    },
+    {
+      "name": "Comparative Advantage",
+      "hint": "Maximizing total output by specializing in tasks where your opportunity cost is lowest."
+    },
+    {
+      "name": "Opportunity Cost",
+      "hint": "The true cost of any decision is the value of the next best alternative you sacrificed."
+    },
+    {
+      "name": "Theory of Constraints (Goldratt)",
+      "hint": "A system's total throughput is governed entirely by a single primary bottleneck."
+    },
+    {
+      "name": "Feedback Loops (Positive vs Negative)",
+      "hint": "Negative feedback loops restore stability; positive feedback loops drive exponential divergence or collapse."
+    },
+    {
+      "name": "Sayre's Law",
+      "hint": "In any dispute, the intensity of feeling is inversely proportional to the importance of the issue."
+    },
+    {
+      "name": "Shirky Principle",
+      "hint": "Institutions will try to preserve the problem to which they are the solution."
+    },
+    {
+      "name": "Local vs Global Optimum",
+      "hint": "Optimizing individual components in isolation frequently prevents the entire system from reaching its global peak."
+    },
+    {
+      "name": "Margin of Safety",
+      "hint": "Building buffer capacity into designs and estimates to survive unexpected shocks and miscalculations."
+    },
+    {
+      "name": "Sturgeon's Law",
+      "hint": "Ninety percent of everything is low quality; focus your search ruthlessly on the ten percent that matters."
+    },
+    {
+      "name": "Two-Way vs One-Way Doors",
+      "hint": "Reversible decisions should be made quickly with limited data; irreversible decisions require deep deliberation."
+    },
+    {
+      "name": "Campbell's Law",
+      "hint": "The more any quantitative social indicator is used for decision-making, the more subject it will be to corruptive pressures."
+    },
+    {
+      "name": "Coordination Traps",
+      "hint": "Situations where everyone wants a better equilibrium, but no single participant can move without suffering alone."
+    },
+    {
+      "name": "Schelling Points",
+      "hint": "Solutions that people tend to converge on by default in the absence of explicit communication."
+    },
+    {
+      "name": "Principal-Agent Problem",
+      "hint": "Conflicts of interest that arise when one person is authorized to make decisions on behalf of another."
+    },
+    {
+      "name": "Information Asymmetry",
+      "hint": "Transactions where one party possesses superior information, creating adverse selection and market decay."
+    },
+    {
+      "name": "Tit-for-Tat Strategy",
+      "hint": "Cooperate on the first move, then simply mirror your opponent's previous move: simple, forgiving, and undefeated."
+    },
+    {
+      "name": "Winner's Curse",
+      "hint": "The winning bidder in an auction with incomplete information typically overpays by exceeding intrinsic value."
+    },
+    {
+      "name": "Costly Signaling",
+      "hint": "Signals are only credible if they require a prohibitive expenditure of resources that impostors cannot fake."
+    },
+    {
+      "name": "Tragedy of the Anticommons",
+      "hint": "When too many distinct rights-holders can block one another, valuable resources remain completely unused."
+    },
+    {
+      "name": "Mechanism Design",
+      "hint": "Designing the rules of a game so that players' self-interested actions naturally yield the desired social outcome."
+    },
+    {
+      "name": "The Pareto Principle",
+      "hint": "Roughly 80 percent of consequences originate from 20 percent of causes."
+    },
+    {
+      "name": "Dunbar's Number",
+      "hint": "The cognitive limit to the number of stable social relationships an individual can maintain is around 150."
+    },
+    {
+      "name": "Metcalfe's Law",
+      "hint": "The value of a telecommunications network is proportional to the square of the number of connected users."
+    },
+    {
+      "name": "Jevons Paradox",
+      "hint": "Technological improvements that increase efficiency in using a resource tend to increase total consumption of it."
     }
   ],
   "paradoxes": [
     {
-      "name": "Simpson's Paradox",
-      "hint": "A trend appears in several different groups of data but disappears or reverses when the groups are combined."
+      "name": "Braess's Paradox",
+      "hint": "Adding capacity to a network can reduce overall throughput when individual actors choose selfish shortcuts."
     },
     {
-      "name": "Braess's Paradox",
-      "hint": "Adding capacity to a network can sometimes slow down overall throughput when agents act selfishly."
+      "name": "Simpson's Paradox",
+      "hint": "A trend that appears in several distinct groups disappears or reverses when the groups are combined."
     },
     {
       "name": "The Monty Hall Problem",
-      "hint": "Why switching doors doubles your chances of winning from 1/3 to 2/3 due to conditional probability."
+      "hint": "Switching doors doubles your winning probability from one-third to two-thirds due to conditional probability."
     },
     {
       "name": "The Birthday Paradox",
-      "hint": "In a room of just 23 people, there is a 50% chance two share the exact same birthday."
+      "hint": "In a room of just 23 people, there is a 50 percent chance that two share the exact same birthday."
     },
     {
       "name": "The Fermi Paradox",
-      "hint": "If the universe is so vast and ancient, where are all the extraterrestrial civilizations?"
+      "hint": "If intelligent extraterrestrial life is statistically probable, why is observable evidence completely absent?"
     },
     {
       "name": "Ship of Theseus",
-      "hint": "If all parts of an object are replaced over time, does fundamental identity persist?"
-    },
-    {
-      "name": "Jevons Paradox",
-      "hint": "Increases in efficiency in using a resource tend to increase the overall rate of consumption of that resource."
+      "hint": "If every original component of an object is replaced over time, does its fundamental identity persist?"
     },
     {
       "name": "The Mpemba Effect",
-      "hint": "Under specific thermodynamic conditions, warm water can freeze faster than cold water."
-    }
-  ],
-  "neuroscience": [
-    {
-      "name": "The Zeigarnik Effect",
-      "hint": "Uncompleted tasks create cognitive tension, consuming working memory until resolved or noted down."
+      "hint": "Under specific thermodynamic conditions, warmer water can freeze faster than colder water."
     },
     {
-      "name": "Ultradian Rhythms",
-      "hint": "The brain's natural 90-minute cycle of peak alertness followed by a mandatory 20-minute recovery trough."
+      "name": "Berkson's Paradox",
+      "hint": "Two completely independent traits appear negatively correlated because of how the sample was selected."
     },
     {
-      "name": "Default Mode Network & Shower Epiphanies",
-      "hint": "Why the brain makes its greatest creative breakthroughs when you disengage from active focus."
+      "name": "The Inspection Paradox",
+      "hint": "You will wait longer than the average bus interval because longer intervals are more likely to be arrived at."
     },
     {
-      "name": "Cognitive Load Theory",
-      "hint": "How context switching and micro-interruptions exhaust working memory before real deep work begins."
+      "name": "Parrondo's Paradox",
+      "hint": "Combining two losing games alternately according to a specific rule can result in a winning game."
     },
     {
-      "name": "Spaced Repetition & Ebbinghaus Curve",
-      "hint": "Why reviewing information right before you're about to forget it locks it permanently in memory."
+      "name": "The Coastline Paradox",
+      "hint": "The measured perimeter of a landmass increases indefinitely as your measuring unit becomes smaller."
     },
     {
-      "name": "Dopamine Prediction Error",
-      "hint": "How anticipation and unexpected rewards drive motivation far more than the actual outcome."
+      "name": "Paradox of Thrift",
+      "hint": "If every household saves more money during a recession, aggregate demand collapses, lowering total savings."
+    },
+    {
+      "name": "Paradox of Tolerance",
+      "hint": "Unlimited tolerance must inevitably lead to the disappearance of tolerance if intolerant forces are tolerated."
+    },
+    {
+      "name": "Paradox of Choice",
+      "hint": "An abundance of options increases anxiety, paralysis, and post-decision regret rather than satisfaction."
+    },
+    {
+      "name": "Sorites Paradox",
+      "hint": "If removing one grain of sand does not turn a heap into a non-heap, at what point does it cease being a heap?"
+    },
+    {
+      "name": "Newcomb's Paradox",
+      "hint": "A decision dilemma between free will and an infallible predictor who anticipates your choice."
+    },
+    {
+      "name": "Allais Paradox",
+      "hint": "People systematically violate expected utility theory when choices involve certainty versus high probability."
+    },
+    {
+      "name": "St. Petersburg Paradox",
+      "hint": "A lottery with infinite expected monetary value that rational participants will only pay a small fee to play."
+    },
+    {
+      "name": "Moravec's Paradox",
+      "hint": "High-level reasoning requires very little computation, while low-level sensory-motor skills require enormous computation."
+    },
+    {
+      "name": "The Abilene Paradox",
+      "hint": "A group collectively decides on an action that counteracts the actual preferences of every individual member."
+    },
+    {
+      "name": "Polanyi's Paradox",
+      "hint": "We know more than we can tell: human tacit knowledge cannot be fully codified into explicit rules."
+    },
+    {
+      "name": "The Friendship Paradox",
+      "hint": "On average, your friends have more friends than you do, due to network sampling bias."
+    },
+    {
+      "name": "Peto's Paradox",
+      "hint": "Incidence of cancer does not correlate with the number of cells in an organism across species (e.g. whales vs humans)."
+    },
+    {
+      "name": "Arrow's Impossibility Theorem",
+      "hint": "No ranked-choice voting system can satisfy a set of basic fair criteria simultaneously."
+    },
+    {
+      "name": "Russell's Barber Paradox",
+      "hint": "A barber shaves all men who do not shave themselves: does the barber shave himself?"
+    },
+    {
+      "name": "Crocodile Paradox",
+      "hint": "A crocodile promises to return a child if the father correctly predicts what the crocodile will do."
+    },
+    {
+      "name": "Raven Paradox",
+      "hint": "Observing a green apple provides logical inductive evidence that all ravens are black."
+    },
+    {
+      "name": "Unexpected Hanging Paradox",
+      "hint": "A prisoner is told an execution will occur on an unexpected day next week, which logic seems to rule impossible."
+    },
+    {
+      "name": "Paradox of Value (Diamond-Water)",
+      "hint": "Water is essential for all life but cheap, while diamonds are completely non-essential but vastly expensive."
+    },
+    {
+      "name": "Catch-22",
+      "hint": "A problematic situation for which the only solution is denied by a rule inherent in the problem."
+    },
+    {
+      "name": "Hedonistic Paradox",
+      "hint": "Constant, deliberate pursuit of pleasure is the quickest way to guarantee misery and dissatisfaction."
+    },
+    {
+      "name": "Benford's Law",
+      "hint": "In naturally occurring numerical datasets, the digit 1 appears as the leading digit over 30 percent of the time."
+    },
+    {
+      "name": "Turing Halting Problem",
+      "hint": "It is mathematically impossible to write a general algorithm that determines whether any arbitrary program halts."
+    },
+    {
+      "name": "Gott's Delta t Argument",
+      "hint": "Predicting the future longevity of an ongoing phenomenon based only on assuming you are observing it at a random point."
+    },
+    {
+      "name": "Liar Paradox",
+      "hint": "The statement 'This statement is false' cannot be consistently assigned truth or falsehood."
     }
   ],
   "thought_experiments": [
     {
       "name": "The Experience Machine (Nozick)",
-      "hint": "If a supercomputer could give you any pleasurable experience for life, would you plug in permanently?"
+      "hint": "If a supercomputer could stimulate your brain to experience any fantasy for life, would you plug in permanently?"
     },
     {
       "name": "Mary the Color Scientist (Jackson)",
-      "hint": "A neuroscientist knows every physical fact about color from a black-and-white room. When she sees red, does she learn anything new?"
+      "hint": "A neuroscientist knows every physical fact about color from a monochrome room. Does she learn anything when seeing red?"
     },
     {
       "name": "The Chinese Room (Searle)",
-      "hint": "A person follows rulebooks to translate Chinese symbols without understanding a word. Does the system understand?"
+      "hint": "A person translates Chinese characters using mechanical rulebooks without understanding a single word."
     },
     {
-      "name": "The Invisible Gorilla",
-      "hint": "When focusing intensely on one task, the human brain systematically tunes out obvious anomalies in plain sight."
+      "name": "The Invisible Gorilla (Simons & Chabris)",
+      "hint": "When focusing intensely on a counting task, people systematically miss an obvious gorilla walking across the frame."
+    },
+    {
+      "name": "The Trolley Problem",
+      "hint": "Diverting a runaway trolley to save five people by killing one: utilitarian outcome versus active deontological harm."
+    },
+    {
+      "name": "Parfit's Teletransporter Paradox",
+      "hint": "A machine scans your atoms, destroys your original body, and builds an identical duplicate on Mars. Did you survive?"
+    },
+    {
+      "name": "Rawls's Veil of Ignorance",
+      "hint": "Designing a just society without knowing your own wealth, talent, gender, or social position in advance."
+    },
+    {
+      "name": "Schrödinger's Cat",
+      "hint": "A cat in a sealed box with radioactive decay exists simultaneously in a superposition of alive and dead until observed."
+    },
+    {
+      "name": "Maxwell's Demon",
+      "hint": "A hypothetical creature sorting fast and slow molecules to violate the Second Law of Thermodynamics."
+    },
+    {
+      "name": "Einstein's Light Beam Ride",
+      "hint": "Imagining racing alongside a light wave led directly to the formulation of special relativity."
+    },
+    {
+      "name": "Brain in a Vat (Putnam)",
+      "hint": "Could you be a disembodied brain wired to a supercomputer simulating all sensory inputs?"
+    },
+    {
+      "name": "Laplace's Demon",
+      "hint": "An intellect that knows the precise position and momentum of every atom in the universe predicting all future events."
+    },
+    {
+      "name": "Lucretius' Spear",
+      "hint": "If you stand at the edge of the universe and throw a spear, what happens? Space must be boundless."
+    },
+    {
+      "name": "Buridan's Ass",
+      "hint": "A donkey placed equidistant between two identical piles of hay starves to death for lack of a reason to pick one."
+    },
+    {
+      "name": "Swampman (Davidson)",
+      "hint": "Lightning obliterates a man and accidentally configures a molecule-for-molecule replica from swamp muck."
+    },
+    {
+      "name": "The Prisoner's Dilemma",
+      "hint": "Two rational actors acting in pure self-interest produce an outcome worse than if they had cooperated."
+    },
+    {
+      "name": "The Stag Hunt (Rousseau)",
+      "hint": "A dilemma between high-reward collective coordination (hunting a stag) and low-reward individual safety (hunting a hare)."
+    },
+    {
+      "name": "The Utility Monster (Nozick)",
+      "hint": "An entity that converts each unit of consumed resources into a thousand times more happiness than ordinary humans."
+    },
+    {
+      "name": "The Ring of Gyges (Plato)",
+      "hint": "If a magical ring granted total invisibility and immunity from consequences, would any rational person remain moral?"
+    },
+    {
+      "name": "Galileo's Falling Bodies",
+      "hint": "Tying a light stone to a heavy stone shows that falling speed cannot depend on weight without logical contradiction."
+    },
+    {
+      "name": "The Infinite Monkey Theorem",
+      "hint": "A monkey hitting keys randomly on a typewriter for an infinite amount of time will eventually type Hamlet."
+    },
+    {
+      "name": "The Divided Brain Experiments",
+      "hint": "Severing the corpus callosum reveals two separate conscious streams operating inside a single human skull."
+    },
+    {
+      "name": "Newton's Rotating Bucket",
+      "hint": "The curved surface of spinning water demonstrates that acceleration is absolute relative to space itself."
+    },
+    {
+      "name": "Ship of Theseus in Motion",
+      "hint": "If you collect all discarded planks from Theseus's ship and build a second ship, which one is the original?"
+    },
+    {
+      "name": "The Experience of Qualia",
+      "hint": "Why does sensory processing feel like anything at all from the inside, rather than operating in dark computation?"
     }
   ],
   "quotes": [
     {
+      "name": "Charlie Munger",
+      "hint": "On avoiding obvious stupidity rather than seeking brilliant moves."
+    },
+    {
       "name": "Marcus Aurelius",
-      "hint": "Stoic wisdom on focusing only on what is within your control."
+      "hint": "On maintaining strict focus only on what lies inside your direct control."
     },
     {
       "name": "Seneca",
-      "hint": "On time management, brevity of life, and avoiding needless anxiety."
+      "hint": "On the brevity of life and avoiding the illusion of perpetual busyness."
     },
     {
       "name": "Epictetus",
-      "hint": "On freedom, perception, and reacting to adversity with equanimity."
+      "hint": "On recognizing that events cannot hurt you; only your interpretation of them can."
     },
     {
       "name": "Lao Tzu",
-      "hint": "On simplicity, patience, flow, and effortless action (Wu Wei)."
-    },
-    {
-      "name": "Aristotle",
-      "hint": "On virtue ethics, habits, and excellence as repeated practice."
+      "hint": "On effortless action (Wu Wei) and avoiding rigid force in leadership."
     },
     {
       "name": "Friedrich Nietzsche",
-      "hint": "On overcoming adversity, self-mastery, and questioning defaults."
+      "hint": "On questioning default dogmas and forging internal strength from adversity."
     },
     {
-      "name": "Confucius",
-      "hint": "On continuous self-improvement, humility, and moral integrity."
-    },
-    {
-      "name": "Alan Watts",
-      "hint": "On presence, Eastern philosophy, and letting go of rigid control."
+      "name": "Richard Feynman",
+      "hint": "On the first principle: you must not fool yourself, and you are the easiest person to fool."
     },
     {
       "name": "Viktor Frankl",
-      "hint": "On finding purpose in suffering and the space between stimulus and response."
+      "hint": "On the space between stimulus and response, where human freedom resides."
     },
     {
       "name": "Carl Jung",
-      "hint": "On shadow work, self-awareness, and bringing the unconscious to light."
+      "hint": "On bringing unconscious behaviors into awareness before they rule your life as fate."
+    },
+    {
+      "name": "Alan Watts",
+      "hint": "On presence and the futility of trying to smooth rough water with a flatiron."
+    },
+    {
+      "name": "Aristotle",
+      "hint": "On excellence being an art won by training and habituation rather than single acts."
+    },
+    {
+      "name": "Confucius",
+      "hint": "On the humility of admitting what you do not know as the foundation of true knowledge."
+    },
+    {
+      "name": "Claude Shannon",
+      "hint": "On information as the reduction of uncertainty in a noisy world."
+    },
+    {
+      "name": "John von Neumann",
+      "hint": "On truth and mathematical simplicity versus human intuition."
+    },
+    {
+      "name": "Blaise Pascal",
+      "hint": "On human troubles originating from man's inability to sit quietly in a room alone."
+    },
+    {
+      "name": "Arthur Schopenhauer",
+      "hint": "On talent hitting a target no one else can hit, while genius hits a target no one else can see."
+    },
+    {
+      "name": "Søren Kierkegaard",
+      "hint": "On life only being understood backwards, while it must be lived forwards."
+    },
+    {
+      "name": "Ralph Waldo Emerson",
+      "hint": "On self-reliance and the foolish consistency that hobbles little minds."
+    },
+    {
+      "name": "Michel de Montaigne",
+      "hint": "On questioning convictions: 'What do I know?' and the virtue of intellectual doubt."
+    },
+    {
+      "name": "Heraclitus",
+      "hint": "On perpetual flux: no man ever steps in the same river twice."
+    },
+    {
+      "name": "Sun Tzu",
+      "hint": "On winning without conflict and understanding the terrain before engaging."
+    },
+    {
+      "name": "Baruch Spinoza",
+      "hint": "On striving neither to weep nor to detest, but solely to understand."
+    },
+    {
+      "name": "William James",
+      "hint": "On the art of being wise being the art of knowing what to overlook."
+    },
+    {
+      "name": "Ludwig Wittgenstein",
+      "hint": "On the limits of my language meaning the limits of my world."
+    },
+    {
+      "name": "Bertrand Russell",
+      "hint": "On the fundamental cause of trouble: the stupid are cocksure while the intelligent are full of doubt."
+    },
+    {
+      "name": "Leonardo da Vinci",
+      "hint": "On simplicity being the ultimate sophistication."
+    },
+    {
+      "name": "Buckminster Fuller",
+      "hint": "On changing things by building a new model that makes the existing model obsolete."
+    },
+    {
+      "name": "Alan Turing",
+      "hint": "On machines taking us by surprise with immense regularity."
+    },
+    {
+      "name": "Niels Bohr",
+      "hint": "On an expert being someone who has made all the mistakes that can be made in a narrow field."
+    },
+    {
+      "name": "Nassim Nicholas Taleb",
+      "hint": "On avoiding ruin: what matters is not how frequently you are right, but how much you lose when wrong."
     }
   ],
   "facts": [
     {
-      "name": "Deep-Ocean Hydrothermal Vents",
-      "hint": "Ecosystems thriving in total darkness on chemosynthesis rather than sunlight."
+      "name": "Ant Colony Optimization",
+      "hint": "Ants solve complex traveling-salesperson routing problems with zero central coordination via evaporating pheromones."
     },
     {
       "name": "Fungal Mycorrhizal Networks",
-      "hint": "Underground fungal superhighways enabling trees and plants to trade nutrients and warnings."
+      "hint": "Underground fungal superhighways allow trees to trade nutrients and distribute warning signals across miles."
     },
     {
       "name": "Superfluidity at Macro Scales",
-      "hint": "Liquid helium climbing container walls with zero viscosity near absolute zero."
+      "hint": "Liquid helium cooled near absolute zero loses all viscosity and climbs upward over container walls."
     },
     {
-      "name": "Corvid Tool Use & Problem Solving",
-      "hint": "Crows and ravens inventing multi-stage tools and passing knowledge down generations."
+      "name": "Deep-Ocean Chemosynthesis",
+      "hint": "Ecosystems thriving around volcanic vents in total darkness relying on hydrogen sulfide rather than sunlight."
     },
     {
-      "name": "Polynesian Open-Ocean Star Navigation",
-      "hint": "Navigating thousands of miles of open Pacific using swell patterns, birds, and star paths."
+      "name": "Corvid Multi-Stage Tool Use",
+      "hint": "Crows and ravens solve novel eight-step mechanical puzzles and manufacture compound tools from scratch."
     },
     {
-      "name": "Ant Colony Decentralized Computing",
-      "hint": "Ant colonies solving complex traveling-salesman routing problems with zero central coordination."
+      "name": "Polynesian Star Navigation",
+      "hint": "Wayfinders sailed thousands of miles across the open Pacific using only wave swells, bird flight, and zenith stars."
+    },
+    {
+      "name": "Tardigrade Cryptobiosis",
+      "hint": "Water bears survive vacuum, cosmic radiation, and absolute zero by suspending metabolism in dry vitrified glass."
+    },
+    {
+      "name": "Cephalopod RNA Editing",
+      "hint": "Octopuses and squids dynamically recode their own RNA to fine-tune nervous system proteins for freezing waters."
+    },
+    {
+      "name": "Slime Mold Railway Optimization",
+      "hint": "Physarum polycephalum recreates the exact Tokyo rail transit network topology when searching for oat flakes."
+    },
+    {
+      "name": "Quantum Entanglement",
+      "hint": "Entangled quantum particles maintain coordinated states instantaneously across arbitrary light-years of distance."
+    },
+    {
+      "name": "Avian Magnetoreception",
+      "hint": "Migratory birds use cryptochrome proteins in their retinas to literally see Earth's magnetic field lines."
+    },
+    {
+      "name": "Bathypelagic Bioluminescence",
+      "hint": "Over 75 percent of deep-sea creatures generate their own cold light for camouflage, signaling, and hunting."
+    },
+    {
+      "name": "Mantis Shrimp Vision",
+      "hint": "Mantis shrimp possess 16 distinct color photoreceptor channels and can perceive polarized and ultraviolet light."
+    },
+    {
+      "name": "Acacia Tree Warning Signals",
+      "hint": "When browsed by herbivores, acacia trees release ethylene gas to warn neighboring trees to flood leaves with tannins."
+    },
+    {
+      "name": "Prime Number Cicada Cycles",
+      "hint": "Periodical cicadas emerge every 13 or 17 years—prime numbers that prevent synchronization with predator life cycles."
+    },
+    {
+      "name": "Venus Flytrap Counting Potential",
+      "hint": "The trap requires two trigger hair touches within 20 seconds to close, preventing wasted energy on falling debris."
+    },
+    {
+      "name": "Whale Fall Oases",
+      "hint": "A single sunken whale carcass nourishes complex specialized deep-sea ecosystems for over a century."
+    },
+    {
+      "name": "Bacterial Quorum Sensing",
+      "hint": "Bacteria coordinate group virulence and biofilm creation only after measuring chemical population density thresholds."
+    },
+    {
+      "name": "Gecko Van der Waals Adhesion",
+      "hint": "Geckos cling to smooth vertical glass using billions of microscopic spatulae that bond via atomic intermolecular forces."
+    },
+    {
+      "name": "Axolotl Regeneration",
+      "hint": "Axolotls can regrow complete limbs, spinal cords, heart muscle, and portions of their brain without scarring."
+    },
+    {
+      "name": "The Pitch Drop Experiment",
+      "hint": "The world's longest running lab experiment shows that solid-looking pitch is actually an ultra-dense fluid dripping once a decade."
+    },
+    {
+      "name": "Synchronous Firefly Phase Locking",
+      "hint": "Thousands of fireflies along riverbanks synchronize flashes into unison through purely local mathematical phase adjustment."
+    },
+    {
+      "name": "Euplectella Glass Sponge",
+      "hint": "Deep-sea glass sponges construct silica fiber lattices that surpass human fiber-optic cables in fracture resistance."
+    },
+    {
+      "name": "Thermohaline Circulation Conveyor",
+      "hint": "A global oceanic conveyor belt driven by salt density and temperature circulates ocean waters over a 1,000-year cycle."
+    },
+    {
+      "name": "Oklo Natural Nuclear Reactor",
+      "hint": "Two billion years ago in Gabon, natural uranium deposits and groundwater sustained self-regulating nuclear fission."
+    },
+    {
+      "name": "Pando Aspen Root Organism",
+      "hint": "A 40,000-tree aspen forest in Utah sharing a single massive subterranean root system weighing 6,000 tons."
+    },
+    {
+      "name": "Starling Murmuration Dynamics",
+      "hint": "Flocks of starlings execute instantaneous evasive aerial maneuvers with each bird reacting only to its seven closest neighbors."
+    },
+    {
+      "name": "The Stroop Effect",
+      "hint": "The brain experiences severe reaction latency when the font color of a word conflicts with the written semantic color name."
+    },
+    {
+      "name": "Sonoluminescence",
+      "hint": "Imploding gas bubbles in liquid subjected to acoustic sound waves reach temperatures hotter than the sun's surface and emit light."
+    },
+    {
+      "name": "Honeybee Waggle Dance",
+      "hint": "Returning scout bees encode the exact distance, angle relative to the sun, and quality of food sources through figure-eight dances."
+    },
+    {
+      "name": "Leafcutter Ant Agriculture",
+      "hint": "Ants cultivate fungal gardens underground using harvested leaves, protecting crops with symbiotic antibiotic-producing bacteria."
+    },
+    {
+      "name": "Epigenetic Memory in Nematodes",
+      "hint": "Pathogen avoidance learning in C. elegans is passed down for four generations through small non-coding RNA inheritance."
+    },
+    {
+      "name": "Tardigrade Radiation Resistance",
+      "hint": "A damage suppressor protein (Dsup) physically wraps around tardigrade DNA like a shield against ionizing radiation."
+    },
+    {
+      "name": "Glass Wing Butterfly Nanostructures",
+      "hint": "Wings with irregular nanopillars that eliminate light reflection, making them completely transparent to predators."
+    },
+    {
+      "name": "Immortal Jellyfish (Turritopsis)",
+      "hint": "When stressed or injured, cells revert via transdifferentiation back into polyp form, achieving biological immortality."
     }
   ]
 }
