@@ -66,6 +66,10 @@ def generate_fact(mode: str = None, return_topic: bool = False):
     else:
         history_bullets = "- None recorded yet."
 
+    logger.info(f"Retrieved recent topics history (limit=25): {len(recent_history) if recent_history else 0} entries")
+    if recent_history:
+        logger.info(f"Recent history:\n{history_bullets}")
+
     # 2. Select mode with category rotation
     if mode not in MODES:
         last_mode = None
@@ -86,6 +90,7 @@ def generate_fact(mode: str = None, return_topic: bool = False):
             elif "curious" in last_top or "discovery" in last_top or "fact" in last_top:
                 last_mode = "fact"
 
+        logger.info(f"Detected last_mode={last_mode} from recent history")
         candidate_modes = [m for m in MODES if m != last_mode]
         base_weights = {
             "cognitive_bias": 0.26,
@@ -98,8 +103,10 @@ def generate_fact(mode: str = None, return_topic: bool = False):
         }
         weights = [base_weights[m] for m in candidate_modes]
         mode = random.choices(candidate_modes, weights=weights)[0]
+        logger.info(f"Randomly selected mode={mode} from candidates (weights={weights})")
 
     temperature = random.uniform(0.7, 0.9)
+    logger.info(f"Set temperature={temperature:.2f} for generation")
 
     # 3. Dynamic Prompts for each mode passing previous topics history
     if mode == "cognitive_bias":
@@ -222,6 +229,8 @@ def generate_fact(mode: str = None, return_topic: bool = False):
             '— <b>[Thinker Name]</b>\n\n'
             "🎯 <i>The takeaway:</i> [1 punchy sentence applying this to modern work or mindset without clichés.]"
         )
+        logger.info(f"Quote mode selected. System prompt: {system_content[:100]}...")
+        logger.info(f"Quote user prompt:\n{user_content}")
 
     else:  # fact
         system_content = (
@@ -249,30 +258,46 @@ def generate_fact(mode: str = None, return_topic: bool = False):
     ]
 
     try:
+        logger.info(f"Invoking LLM for mode={mode} with temperature={temperature:.2f}")
         content = generate_llm_response(messages, temperature=temperature)
+        logger.info(f"Raw LLM response (mode={mode}):\n{content}")
+        
         content = clean_telegram_html(content).strip()
+        logger.info(f"Cleaned response:\n{content}")
 
         # Extract topic from the first line HTML tags, e.g. <b>Cognitive Trap: Choice Blindness</b>
         topic_match = re.search(r"<b>(.*?)</b>", content)
         if topic_match:
             topic = html.unescape(topic_match.group(1).strip())
+            logger.info(f"Extracted topic from response: {topic}")
         else:
             topic = f"{mode.replace('_', ' ').title()}: Dynamic Insight"
+            logger.warning(f"Could not extract topic from response. Using fallback: {topic}")
+
+        # For quote mode specifically, also extract the thinker name
+        if mode == "quote":
+            thinker_match = re.search(r"— <b>(.*?)</b>", content)
+            if thinker_match:
+                thinker_name = thinker_match.group(1).strip()
+                logger.info(f"Extracted quote thinker: {thinker_name}")
 
         # Record newly generated topic locally as persistent history
         try:
             record_recent_topic(topic)
-        except Exception:
-            pass
+            logger.info(f"Successfully recorded topic to database: {topic}")
+        except Exception as e:
+            logger.warning(f"Failed to record recent topic '{topic}' to database: {e}")
 
         if return_topic:
             return content, topic, mode
         return content, mode
     except Exception as e:
-        logger.error(f"Error generating dynamic insight with LLM: {e}")
+        logger.error(f"Error generating dynamic insight with LLM (mode={mode}): {e}")
+        logger.exception(f"Full exception trace for mode={mode}")
         # Return high quality curated fallback so user always receives insight
         fallback_content = _get_curated_fallback(mode, "Fallback")
         topic = f"{mode.replace('_', ' ').title()}: Curated Insight"
+        logger.info(f"Using fallback content for mode={mode}: {topic}")
         if return_topic:
             return fallback_content, topic, mode
         return fallback_content, mode
@@ -355,6 +380,7 @@ def main():
         logger.info("Done!")
     except Exception as e:
         logger.error(f"Failed to complete insight generation workflow: {e}")
+        logger.exception("Full exception trace")
         exit(1)
 
 
