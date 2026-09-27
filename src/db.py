@@ -1,4 +1,6 @@
 import os
+import json
+import tempfile
 import logging
 from supabase import create_client, Client
 
@@ -416,6 +418,129 @@ def is_email_admin(email: str) -> bool:
     except Exception as e:
         logger.error(f"Failed to query 'allowed_users' by email {email}: {e}")
     return False
+
+
+LOCAL_TOPICS_PATH = os.path.join(tempfile.gettempdir(), "recent_topics.json")
+
+
+def _normalize_topic_key(topic: str) -> str:
+    """Normalize topic string to extract the core concept for strict deduplication."""
+    import re, html
+    t = html.unescape(topic or "").strip()
+    return re.sub(
+        r"^(cognitive trap|cognitive bias|mental model|paradox|biology & focus|neuroscience|thought experiment|curious discovery|timeless wisdom|quote):\s*",
+        "",
+        t,
+        flags=re.IGNORECASE,
+    ).strip().lower()
+
+
+def get_recent_topics_history(limit: int = 25) -> list[tuple[str, int]]:
+    """
+    Retrieves strictly distinct recent insight topics and how many days ago they were covered.
+    Returns a list of tuples: (clean_topic_name, days_ago)
+    Deduplicates topics by normalized core concept.
+    """
+    import html
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc)
+    raw_entries = []
+
+    # 1. Fetch from Supabase request_audit (authoritative source with real timestamps)
+    client = get_supabase_client()
+    if client:
+        try:
+            response = (
+                client.table("request_audit")
+                .select("topic, created_at")
+                .in_("endpoint", ["fact_scheduler", "webhook"])
+                .not_.is_("topic", "null")
+                .order("id", desc=True)
+                .limit(limit * 3)
+                .execute()
+            )
+            if response.data:
+                for row in response.data:
+                    t = row.get("topic")
+                    c = row.get("created_at")
+                    if t:
+                        raw_entries.append({"topic": t, "created_at": c})
+        except Exception as e:
+            logger.warning(f"Could not fetch recent topics from Supabase: {e}")
+
+    # 2. Augment with local cache entries (for freshly recorded local runs)
+    if os.path.exists(LOCAL_TOPICS_PATH):
+        try:
+            with open(LOCAL_TOPICS_PATH, "r", encoding="utf-8") as f:
+                local_data = json.load(f)
+            # Prepend local entries so newest local runs are evaluated first
+            raw_entries = local_data + raw_entries
+        except Exception as ex:
+            logger.debug(f"Could not read local topics cache: {ex}")
+
+    # 3. Strictly deduplicate by normalized core concept
+    seen_keys = set()
+    distinct_results = []
+    cache_to_save = []
+
+    for item in raw_entries:
+        raw_topic = item.get("topic")
+        if not raw_topic or raw_topic in ("help", "list_users") or raw_topic.startswith("allow_user") or raw_topic.startswith("revoke_user") or "quiz" in raw_topic.lower():
+            continue
+
+        clean_topic = html.unescape(raw_topic).strip()
+        norm_key = _normalize_topic_key(clean_topic)
+        if not norm_key or norm_key in seen_keys:
+            continue
+        seen_keys.add(norm_key)
+
+        created_at_str = item.get("created_at")
+        days_ago = 0
+        if created_at_str:
+            try:
+                dt = datetime.fromisoformat(created_at_str)
+                days_ago = max(0, (now - dt).days)
+            except Exception:
+                pass
+
+        distinct_results.append((clean_topic, days_ago))
+        cache_to_save.append({"topic": clean_topic, "created_at": created_at_str or now.isoformat()})
+        if len(distinct_results) >= limit:
+            break
+
+    # Persist the clean deduplicated cache with preserved timestamps
+    try:
+        os.makedirs(os.path.dirname(LOCAL_TOPICS_PATH), exist_ok=True)
+        with open(LOCAL_TOPICS_PATH, "w", encoding="utf-8") as f:
+            json.dump(cache_to_save, f, indent=2)
+    except Exception as ex:
+        logger.debug(f"Could not sync local topics cache: {ex}")
+
+    return distinct_results
+
+
+def record_recent_topic(topic: str):
+    """Save newly generated topic to local cache as backup."""
+    from datetime import datetime, timezone
+    if not topic:
+        return
+    try:
+        os.makedirs(os.path.dirname(LOCAL_TOPICS_PATH), exist_ok=True)
+        items = []
+        if os.path.exists(LOCAL_TOPICS_PATH):
+            try:
+                with open(LOCAL_TOPICS_PATH, "r", encoding="utf-8") as f:
+                    items = json.load(f)
+            except Exception:
+                items = []
+        # Prepend new item with real current timestamp
+        now_str = datetime.now(timezone.utc).isoformat()
+        items.insert(0, {"topic": topic, "created_at": now_str})
+        # Keep latest 50
+        with open(LOCAL_TOPICS_PATH, "w", encoding="utf-8") as f:
+            json.dump(items[:50], f, indent=2)
+    except Exception as e:
+        logger.debug(f"Failed to record topic locally: {e}")
 
 
 
